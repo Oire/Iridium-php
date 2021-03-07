@@ -320,7 +320,7 @@ You may set expiration time in three different ways, as you like:
 
 You may store some sensitive data in the additional information for the token such as old and new e-mail address and similar things.  
 **Note**! Do **not** store plain-text passwords in this property, it can be decrypted! Passwords must not be decryptable, they must be hashed instead. If you need to handle passwords, use the Password class, it is suitable for proper password hashing (see above). You may store password hashes in this property, though.  
-If your additional info contains sensitive data, you can encrypt it. To do this, you first need to have an Iridium symmetric key created with the Crypt class:
+If your additional info contains sensitive data, you can encrypt it. To do this, you first need to have an Iridium symmetric key (see above):
 
 ```php
 use Oire\Iridium\Key\SymmetricKey;
@@ -347,7 +347,7 @@ Osst throws two types of exceptions:
 * `InvalidTokenException` is thrown when something really wrong happens to the token itself or to SQL queries related to the token (for example, a token is not found, it has been tampered with, its length is invalid or a PDO statement cannot be executed);
 * `OsstException` is thrown in most cases when you do something erroneously (for example, try to store an empty token into the database, forget to set a required property or try to set such a property when validating a user-provided token, try to set expiration time which is in the past etc.).
 
-## Methods
+### Methods
 
 Below all of the Osst methods are outlined.
 
