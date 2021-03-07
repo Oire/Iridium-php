@@ -6,6 +6,39 @@
 Welcome to Iridium, a security library for encrypting data, hashing passwords and managing secure tokens!  
 This library consists of several classes, or modules, and can be used for hashing and verifying passwords, encrypting and decrypting data, as well as for managing secure tokens suitable for authentication cookies, password reset, API access and various other tasks.
 
+# Table of Contents
+
+* [Requirements](#requirements)
+* [Installation](#installation)
+* [Running Tests](#running-tests)
+* [Base64 Handling, URL\-safe Way](#base64-handling-url-safe-way)
+    * [Usage Examples](#usage-examples)
+    * [Methods](#methods)
+* [Crypt](#crypt)
+    * [Symmetric Key](#symmetric-key)
+        * [Symmetric Key Methods](#symmetric-key-methods)
+    * [Crypt Usage Examples](#crypt-usage-examples)
+    * [Exceptions](#exceptions)
+    * [Methods](#methods-1)
+* [Password](#password)
+    * [Usage Examples](#usage-examples-1)
+    * [Methods](#methods-2)
+* [Osst, Simple Yet Secure Tokens Suitable for Authentication Cookies and Password Recovery](#osst-simple-yet-secure-tokens-suitable-for-authentication-cookies-and-password-recovery)
+    * [The Split Tokens Concept](#the-split-tokens-concept)
+    * [Usage Examples](#usage-examples-2)
+        * [Create a Table](#create-a-table)
+        * [Create a Token](#create-a-token)
+        * [Set and Validate a User\-Provided Token](#set-and-validate-a-user-provided-token)
+        * [Revoke a Token](#revoke-a-token)
+        * [Clear Expired Tokens](#clear-expired-tokens)
+        * [Three Ways of Setting Expiration Time](#three-ways-of-setting-expiration-time)
+        * [Notes on Expiration Times](#notes-on-expiration-times)
+        * [Encrypt Additional Information](#encrypt-additional-information)
+    * [Error Handling](#error-handling)
+    * [Methods](#methods-3)
+* [Contributing](#contributing)
+* [License](#license)
+
 ## Requirements
 
 Requires PHP 7.3 or later with _PDO_, _Mbstring_ and _OpenSSL_ enabled.
