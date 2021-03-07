@@ -1,0 +1,55 @@
+{
+    "name": "oire/iridium",
+    "description": "Iridium, a security library for hashing passwords, encrypting data and managing secure tokens.",
+    "type": "library",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Oire/php-code-style"
+        }
+    ],
+    "require": {
+        "php": ">=7.3"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^2.16",
+        "oire/php-code-style": "dev-master",
+        "phpunit/phpunit": "*",
+        "psalm/plugin-phpunit": "*",
+        "vimeo/psalm": "*"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Andre Polykanine also known as Menelion Elensúlë",
+            "email": "ap@oire.me",
+            "homepage": "https://github.com/Menelion",
+            "role": "developer"
+        }
+    ],
+    "support": {
+        "issues":   "https://github.com/Oire/Iridium-php/issues",
+        "source":   "https://github.com/Oire/Iridium-php"
+    },
+    "autoload": {
+        "psr-4": {
+            "Oire\\Iridium\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Oire\\Iridium\\Tests\\": "tests"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "preferred-install": {
+            "*": "dist"
+        }
+    },
+    "scripts": {
+        "tests": "vendor/bin/phpunit",
+        "coding-style": "vendor/bin/php-cs-fixer fix --dry-run --diff --config=.php_cs.dist",
+        "clear": "rm -rf vendor/"
+    }
+}
