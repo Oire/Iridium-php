@@ -2,6 +2,8 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/Oire/Iridium.svg?style=flat-square)](https://packagist.org/packages/Oire/Iridium)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Oire/Iridium-php/blob/master/LICENSE)
+[![Psalm coverage](https://shepherd.dev/github/Oire/Iridium-php/coverage.svg?)
+[![Psalm level](https://shepherd.dev/github/Oire/Iridium-php/level.svg?)](https://psalm.dev/)
 
 Welcome to Iridium, a security library for encrypting data, hashing passwords and managing secure tokens!  
 This library consists of several classes, or modules, and can be used for hashing and verifying passwords, encrypting and decrypting data, as well as for managing secure tokens suitable for authentication cookies, password reset, API access and various other tasks.
@@ -80,7 +82,7 @@ The quick brown fox jumps over the lazy dog
 
 the Base64 class has the following methods:
 
-* `static encode(string $data, bool $preservePadding): string` — Encodes provided data into URL-safe Base64. If `preservePadding` is set to `true`, the padding `=` signs will be replaced by tildes (`~`). If set to `false` (default), padding signs will be truncated.
+* `static encode(string $data, bool $preservePadding = false): string` — Encodes provided data into URL-safe Base64. If `preservePadding` is set to `true`, the padding `=` signs will be replaced by tildes (`~`). If set to `false` (default), padding signs will be truncated.
 * `static decode(string $encodedData): string` — decodes provided Base64 data and returns the original string.
 
 ## Crypt
@@ -164,7 +166,7 @@ use Oire\Iridium\Password;
 // You should have $key somewhere in an environment variable
 $symmetricKey = new SymmetricKey($key);
 
-try {}
+try {
     $storeMe = Password::lock($_POST['password'], $symmetricKey);
 } catch (PasswordException $e) {
     // Handle errors
@@ -194,7 +196,7 @@ You can also use Crypt to reencrypt the password with another key, just use `Cry
 
 The Password class has the following methods:
 
-* `static Lock(string $password, SymmetricKey $key): string` — Locks, i.e., hashes a password with a given key. Returns the encrypted hash in readable and storable format. A hashed password cannot be restored, so it is safe to be stored in a database.
+* `static Lock(string $password, SymmetricKey $key): string` — Locks, i.e., hashes a password and encrypts it with a given key. Returns the encrypted hash in readable and storable format. A hashed password cannot be restored, so it is safe to be stored in a database.
 * `static Check(string $password, string $encryptedHash, SymmetricKey $key): bool` — Verifies whether a given password matches the provided hash. Returns `true` on success and `false` on failure.
 
 ## Osst, Simple Yet Secure Tokens Suitable for Authentication Cookies and Password Recovery
@@ -214,7 +216,7 @@ Support for popular ORMs is planned for a future version.
 #### Create a Table
 
 Iridium tries to be as database agnostic as possible (MySQL and SQLite were tested, the latter actually powers the unit tests).  
-First you need to create the `osst_tokens` table. For mySQL the statement is as follows:
+First you need to create the `iridium_tokens` table. For mySQL the statement is as follows:
 
 ```sql
 CREATE TABLE `iridium_tokens` (
@@ -284,7 +286,7 @@ if ($osst->tokenIsExpired()) {
 
 #### Revoke a Token
 
-After a token is used once for authentication, password reset and other sensitive operation or is compromised, you must revoke, i.e., invalidate it. If you use Iridium tokens as API keys, you can set the expiration time far in the future and not revoke the token after first use, certainly. There are two ways of revoking a token:
+After a token is used once for authentication, password reset and other sensitive operation, is expired or compromised, you must revoke, i.e., invalidate it. If you use Iridium tokens as API keys, you can set the expiration time far in the future and not revoke the token after first use, certainly. There are two ways of revoking a token:
 
 * Setting the expiration time for the token in the past (default);
 * Deleting the token from the database whatsoever. To do this, pass `true` as the parameter to the `revokeToken()` method:
