@@ -12,11 +12,11 @@
         "php": ">=7.3"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^2.16",
+        "friendsofphp/php-cs-fixer": "*",
         "oire/php-code-style": "dev-master",
         "phpunit/phpunit": "*",
         "psalm/plugin-phpunit": "*",
-        "vimeo/psalm": "*"
+        "vimeo/psalm": "dev-master"
     },
     "license": "MIT",
     "authors": [

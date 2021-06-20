@@ -28,41 +28,50 @@ namespace Oire\Iridium\Exception;
  */
 class OsstException extends IridiumException
 {
+
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function invalidUserId(int $userId = 0): self
     {
         return new self(sprintf('Invalid user ID. Should be a positive integer, %d given.', $userId));
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function emptyExpirationOffset(): self
     {
         return new self('Expiration offset must not be empty.');
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function emptyExpirationTime(): self
     {
         return new self('Expiration time cannot be empty, set or create the token first.');
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function expirationTimeInPast(int $expirationTime): self
     {
         return new self(sprintf('Expiration time cannot be in the past. The difference is -%d seconds.', time() - $expirationTime));
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function tokenNotSet(): self
     {
         return new self('The token is not set, please retrieve or create it first.');
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function propertyAlreadySet(string $property): self
     {
         return new self(sprintf('%s is already set in token validation.', $property));
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function additionalInfoEncryptionError(CryptException $e): self
     {
         return new self(sprintf('Unable to encrypt additional info: %s.', $e->getMessage()), $e);
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function additionalInfoDecryptionError(CryptException $e): self
     {
         return new self(sprintf('Unable to decrypt additional info: %s.', $e->getMessage()), $e);

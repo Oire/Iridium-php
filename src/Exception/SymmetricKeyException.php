@@ -29,11 +29,14 @@ namespace Oire\Iridium\Exception;
  */
 final class SymmetricKeyException extends IridiumException
 {
+
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     public static function authenticationKeyFailed(): self
     {
         return new self('Failed to derive authentication key.');
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     public static function encryptionKeyFailed(): self
     {
         return new self('Failed to derive encryption key.');

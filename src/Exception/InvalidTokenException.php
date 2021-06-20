@@ -30,31 +30,38 @@ use Throwable;
  */
 final class InvalidTokenException extends OsstException
 {
+
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     public static function sqlError(Throwable $e): self
     {
         return new self(sprintf('SQL error: %s.', $e->getMessage()), $e);
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     public static function pdoStatementError(string $message): self
     {
         return new self(sprintf('PDO statement failed: %s.', $message));
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     public static function invalidTokenFormat(string $message, Throwable $e): self
     {
         return new self(sprintf('The token format is invalid: %s.', $message), $e);
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     public static function invalidTokenLength(): self
     {
         return new self('Invalid token length.');
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     public static function selectorError(): self
     {
         return new self('Selector is empty or does not match.');
     }
 
+    /** @psalm-suppress PossiblyUnusedReturnValue */
     public static function verifierError(): self
     {
         return new self('Verifier is empty or does not match.');
