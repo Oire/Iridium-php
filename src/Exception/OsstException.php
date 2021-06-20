@@ -28,7 +28,6 @@ namespace Oire\Iridium\Exception;
  */
 class OsstException extends IridiumException
 {
-
     /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function invalidUserId(int $userId = 0): self
     {

@@ -30,7 +30,6 @@ use Throwable;
  */
 final class InvalidTokenException extends OsstException
 {
-
     /** @psalm-suppress PossiblyUnusedReturnValue */
     public static function sqlError(Throwable $e): self
     {

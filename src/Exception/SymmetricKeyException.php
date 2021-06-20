@@ -29,7 +29,6 @@ namespace Oire\Iridium\Exception;
  */
 final class SymmetricKeyException extends IridiumException
 {
-
     /** @psalm-suppress PossiblyUnusedReturnValue */
     public static function authenticationKeyFailed(): self
     {

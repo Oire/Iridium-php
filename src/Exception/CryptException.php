@@ -29,7 +29,6 @@ namespace Oire\Iridium\Exception;
  */
 class CryptException extends IridiumException
 {
-
     /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function hmacFailed(): self
     {
