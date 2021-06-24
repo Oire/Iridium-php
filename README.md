@@ -24,6 +24,10 @@ composer require oire/iridium
 
 Run `./vendor/bin/phpunit` in the project directory.
 
+## Running Psalm Analysis
+
+Run `./vendor/bin/psalm` in the project directory.
+
 ## Base64 Handling, URL-safe Way
 
 The Base64 module encodes data to Base64 URL-safe way and decodes encoded data.
@@ -80,7 +84,7 @@ The quick brown fox jumps over the lazy dog
 
 ### Methods
 
-the Base64 class has the following methods:
+The Base64 class has the following methods:
 
 * `static encode(string $data, bool $preservePadding = false): string` — Encodes provided data into URL-safe Base64. If `preservePadding` is set to `true`, the padding `=` signs will be replaced by tildes (`~`). If set to `false` (default), padding signs will be truncated.
 * `static decode(string $encodedData): string` — decodes provided Base64 data and returns the original string.
@@ -88,7 +92,7 @@ the Base64 class has the following methods:
 ## Crypt
 
 The Crypt module is used to encrypt and decrypt data.  
-**Note**! Do not use this for managing passwords! Passwords must not be encrypted, they must be hashed instead. To manage passwords, use the Password module (see below).  
+**Note**! Do not use this for managing passwords! Passwords must not be encrypted, they must be *hashed* instead. To manage passwords, use the Password module (see below).  
 Currently the Crypt module supports only symmetric-key encryption, i.e., encryption and decryption is performed with one shared key.
 
 ### Symmetric Key
@@ -133,7 +137,7 @@ $encrypted = Crypt::encrypt($data, $symmetricKey);
 ```
 
 That's it, you may store your encrypted data in a database or perform other actions with them.  
-to decrypt the data with the same key, use the following:
+To decrypt the data with the same key, use the following:
 
 ```php
 $decrypted = Crypt::decrypt($encrypted, $symmetricKey);
@@ -146,7 +150,7 @@ Crypt throws `EncryptionException`, `DecryptionException` and sometimes a more g
 
 The Crypt class has the following methods:
 
-* `static Crypt(string $data, SymmetricKey $key): string` — Encrypts given data with a given key. Returns the encrypted data in readable and storable form.
+* `static encrypt(string $data, SymmetricKey $key): string` — Encrypts given data with a given key. Returns the encrypted data in readable and storable form.
 * `static Decrypt(string $encryptedData, SymmetricKey $key): string` — Decrypts previously encrypted data with the same key they were encrypted with and returns the original string.
 * `static swapKey(string $data, SymmetricKey $oldKey, SymmetricKey $newKey): string` — Reencrypts encrypted data with a different key and returns the newly encrypted data.
 
@@ -240,10 +244,10 @@ The field lengths are optimal, the only one you may need to adjust is `additiona
 
 #### Create a Token
 
-first you need to create a token. There are some **required** properties (marked in bold) and some *optional* ones (marked in italic) you can set. If you don’t set one or more of the required properties, an `OsstException` will be thrown.
+First you need to create a token. There are some **required** properties (marked in bold) and some *optional* ones (marked in italic) you can set. If you don’t set one or more of the required properties, an `OsstException` will be thrown.
 
 * `userId`, **required** — ID of the user the token belongs to, as an integer.
-* `expirationTime`, **required** — Time when the token expires. Stored as timestamp (big integer), but can be set in various ways, see below.
+* `expirationTime`, **required** — Time when the token expires. Stored as timestamp (big integer), but can be set in various ways, see below. If set to `0`, the token is eternal, i.e., it never expires.
 * `tokenType`, *optional* — If you want to perform an additional check of the token (say, separate password recovery tokens from e-mail change tokens), you may set a token type as an integer.
 * `additionalInfo`, *optional* — Any additional information you want to convey with the token, as string. For instance, you can pass some JSON data here. The information can be additionally encrypted, see below.
 
@@ -261,7 +265,8 @@ $osst = (new Osst($dbConnection))
     ->persist();
 ```
 
-Use `$osst->getToken()` to actually get the newly created token as a string.
+Use `$osst->getToken()` to actually get the newly created token as a string.  
+If you want to create a non-expirable token, either use `makeEternal()` instead of `setExpirationTime()`, or use `setExpirationTime(0)`.
 
 #### Set and Validate a User-Provided Token
 
@@ -277,7 +282,7 @@ try {
     // Something went wrong with the token: either it is invalid, not found or has been tampered with
 }
 
-if ($osst->tokenIsExpired()) {
+if ($osst->isExpired()) {
     // The token is correct but expired
 }
 ```
@@ -286,7 +291,7 @@ if ($osst->tokenIsExpired()) {
 
 #### Revoke a Token
 
-After a token is used once for authentication, password reset and other sensitive operation, is expired or compromised, you must revoke, i.e., invalidate it. If you use Iridium tokens as API keys, you can set the expiration time far in the future and not revoke the token after first use, certainly. There are two ways of revoking a token:
+After a token is used once for authentication, password reset and other sensitive operation, is expired or compromised, you must revoke, i.e., invalidate it. If you use Iridium tokens as API keys, tokens for unsubscribing from email lists and so on, you can make your token eternal or set the expiration time far in the future and not revoke the token after first use, certainly. There are two ways of revoking a token:
 
 * Setting the expiration time for the token in the past (default);
 * Deleting the token from the database whatsoever. To do this, pass `true` as the parameter to the `revokeToken()` method:
@@ -308,7 +313,7 @@ $deletedTokens = Osst::clearExpiredTokens($dbConnection);
 
 You may set expiration time in three different ways, as you like:
 
-* `setExpirationTime()` — Accepts a raw timestamp as integer. If null, defaults to current time plus 14 days.
+* `setExpirationTime()` — Accepts a raw timestamp as integer. If null, defaults to current time plus 14 days. If set to `0`, the token is eternal and never expires.
 * `setExpirationDate()` — Accepts a `DateTimeImmutable` object.
 * `setExpirationOffset()` — Accepts a [relative datetime format](https://www.php.net/manual/en/datetime.formats.relative.php). Default is `+14 days`.
 
@@ -316,12 +321,13 @@ You may set expiration time in three different ways, as you like:
 
 * All expiration times are internally stored as UTC timestamps.
 * Expiration times are set, compared and formatted according to the time of the PHP server, so you won't be in trouble even if your PHP and database server times are different for some reason.
+* Expiration time with value `0` makes your token eternal, so it never expires until you revoke it manually.
 * Microseconds for expiration times are ignored for now, their support is planned for a future version.
 
 #### Encrypt Additional Information
 
 You may store some sensitive data in the additional information for the token such as old and new e-mail address and similar things.  
-**Note**! Do **not** store plain-text passwords in this property, it can be decrypted! Passwords must not be decryptable, they must be hashed instead. If you need to handle passwords, use the Password class, it is suitable for proper password hashing (see above). You may store password hashes in this property, though.  
+**Note**! Do **not** store plain-text passwords in this property, it can be decrypted! Passwords must not be decryptable, they must be *hashed* instead. If you need to handle passwords, use the Password class, it is suitable for proper password hashing (see above). You may store password hashes in this property, though.  
 If your additional info contains sensitive data, you can encrypt it. To do this, you first need to have an Iridium symmetric key (see above):
 
 ```php
@@ -362,9 +368,11 @@ Below all of the Osst methods are outlined.
 * `getExpirationDate(): DateTimeImmutable` — Get expiration time for the token as a DateTimeImmutable object. Returns the date in the current time zone of your PHP server.
 * `getExpirationDateFormatted(string $format = 'Y-m-d H:i:s'): string` — Get expiration time for the token as date string. The default format is `2020-11-15 12:34:56`. The `$format` parameter must be a valid [date format](https://www.php.net/manual/en/function.date.php).
 * `setExpirationTime(int|null $timestamp = null): self` — Set expiration time for the token as a raw timestamp. If the timestamp is null, defaults to the current time plus 14 days.
+* `makeEternal(): self` — Makes the token eternal, so it will never expire until you revoke it manually. Returns `$this` for chainability.
 * `setExpirationOffset(string $offset = '+14 days'): self` — Set expiration time for the token as a relative time offset. The default value is `+14 days`. The `$offset` parameter must be a valid [relative time format](https://www.php.net/manual/en/datetime.formats.relative.php). Returns `$this` for chainability.
 * `setExpirationDate(DateTimeImmutable $expirationDate): self` — Set expiration time for the token as a [DateTimeImmutable](https://www.php.net/manual/en/class.datetimeimmutable.php) object. Returns `$this` for chainability.
-* `tokenIsExpired(): bool` — Check if the token is expired. Returns `true` if the token has already expired, `false` otherwise.
+* `isEternal(): bool` — check if the token is eternal and never expires. Returns `true` if the token is eternal, `false` if it has expiration time set in the future.
+* `isExpired(): bool` — Check if the token is expired. Returns `true` if the token has already expired, `false` otherwise.
 * `getTokenType(): int|null` — Get the type for the current token. Returns integer if the token type was set before, or null if the token has no type.
 * `setTokenType(int|null $tokenType): self` — Set the type for the current token, as integer or null. Returns `$this` for chainability.
 * `getAdditionalInfo(): string|null` — Get additional info for the token. Returns string or null, if additional info was not set before.
@@ -375,7 +383,14 @@ Below all of the Osst methods are outlined.
 
 ## Contributing
 
-All contributions are welcome. Please fork, make a feature branch, hack on the code, run tests, push your branch and send a pull request.
+All contributions are welcome. Please fork, make a feature branch, hack on the code, run tests, push your branch and send a pull request.  
+Don't forget to run the code style fixer before committing:
+
+```shell
+./vendor/bin/php-cs-fixer fix
+```
+
+When your pull request is submitted, make sure all checks passed on CI.
 
 ## License
 

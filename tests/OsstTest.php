@@ -105,6 +105,7 @@ class OsstTest extends TestCase
         self::assertSame($token, $osst->getToken());
         self::assertSame(self::TEST_USER_ID, $osst->getUserId());
         self::assertSame($expirationTime, $osst->getExpirationTime());
+        self::assertFalse($osst->isEternal());
         self::assertNull($osst->getTokenType());
         self::assertSame(self::TEST_ADDITIONAL_INFO, $osst->getAdditionalInfo());
     }
@@ -122,6 +123,7 @@ class OsstTest extends TestCase
         self::assertSame(self::TEST_USER_ID, $osst->getUserId());
         self::assertSame(self::TEST_TOKEN_TYPE, $osst->getTokenType());
         self::assertSame($expirationTime, $osst->getExpirationTime());
+        self::assertFalse($osst->isEternal());
         self::assertNull($osst->getAdditionalInfo());
     }
 
@@ -139,7 +141,24 @@ class OsstTest extends TestCase
         self::assertSame(self::TEST_TOKEN_TYPE, $osst->getTokenType());
         self::assertSame($expirationDate->getTimestamp(), $osst->getExpirationDate()->getTimestamp());
         self::assertSame($expirationDate->format(Osst::DEFAULT_EXPIRATION_DATE_FORMAT), $osst->getExpirationDateFormatted());
+        self::assertFalse($osst->isEternal());
         self::assertNull($osst->getAdditionalInfo());
+    }
+
+    public function testCreateEternalToken(): void
+    {
+        $startOsst = new Osst(self::$db);
+        $token = $startOsst->getToken();
+        $startOsst->setUserId(self::TEST_USER_ID)->makeEternal()->setAdditionalInfo(self::TEST_ADDITIONAL_INFO)->persist();
+
+        $osst = new Osst(self::$db, $token);
+
+        self::assertSame($token, $osst->getToken());
+        self::assertSame(self::TEST_USER_ID, $osst->getUserId());
+        self::assertSame(0, $osst->getExpirationTime());
+        self::assertTrue($osst->isEternal());
+        self::assertNull($osst->getTokenType());
+        self::assertSame(self::TEST_ADDITIONAL_INFO, $osst->getAdditionalInfo());
     }
 
     public function testRevokeToken(): void
@@ -152,10 +171,27 @@ class OsstTest extends TestCase
         $osst = new Osst(self::$db, $token);
 
         self::assertSame($token, $osst->getToken());
-        self::assertFalse($osst->tokenIsExpired());
+        self::assertFalse($osst->isExpired());
 
         $osst->revokeToken();
-        self::assertTrue($osst->tokenIsExpired());
+        self::assertTrue($osst->isExpired());
+    }
+
+    public function testRevokeEternalToken(): void
+    {
+        $startOsst = new Osst(self::$db);
+        $token = $startOsst->getToken();
+        $startOsst->setUserId(self::TEST_USER_ID)->setTokenType(self::TEST_TOKEN_TYPE)->makeEternal()->persist();
+
+        $osst = new Osst(self::$db, $token);
+
+        self::assertSame($token, $osst->getToken());
+        self::assertFalse($osst->isExpired());
+        self::assertTrue($osst->isEternal());
+
+        $osst->revokeToken();
+        self::assertTrue($osst->isExpired());
+        self::assertFalse($osst->isEternal());
     }
 
     public function testClearExpiredTokens(): void
