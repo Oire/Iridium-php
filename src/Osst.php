@@ -248,11 +248,26 @@ final class Osst
     }
 
     /**
+     * Check if the token is eternal, i.e., never expires.
+     * @throws OsstException If the expiration time is empty
+     * @return bool          True if the token never expires, false otherwise. Also returns false if an eternal token has been revoked
+     */
+    public function isEternal(): bool
+    {
+        return $this->expirationTime === 0 && !$this->isExpired();
+    }
+
+    /**
      * Get the expiration time of the token as a DateTime immutable object.
+     * @throws OsstException     If the token never expires
      * @return DateTimeImmutable Returns the expiration time as a DateTimeImmutable in the default time zone set in PHP settings
      */
     public function getExpirationDate(): DateTimeImmutable
     {
+        if ($this->isEternal()) {
+            throw OsstException::tokenNeverExpires();
+        }
+
         return (new DateTimeImmutable(sprintf('@%s', $this->expirationTime)))
             ->setTimezone(new DateTimeZone(date_default_timezone_get()));
     }
@@ -261,13 +276,19 @@ final class Osst
      * Get the expiration time of the token in a given format.
      * @param string $format A valid date format. Defaults to `'Y-m-d H:i:s'`
      * @see https://www.php.net/manual/en/function.date.php
-     * @throws OsstException if the date formatting fails
+     * @throws OsstException if the date formatting fails or the token never expires
      * @return string        Returns the expiration time as date string in given format
      */
     public function getExpirationDateFormatted(string $format = self::DEFAULT_EXPIRATION_DATE_FORMAT): string
     {
+        if ($this->isEternal()) {
+            throw OsstException::tokenNeverExpires();
+        }
+
         try {
-            return (new DateTimeImmutable(sprintf('@%s', $this->expirationTime)))->setTimezone(new DateTimeZone(date_default_timezone_get()))->format($format);
+            return (new DateTimeImmutable(sprintf('@%s', $this->expirationTime)))
+                ->setTimezone(new DateTimeZone(date_default_timezone_get()))
+                ->format($format);
         } catch (Throwable $e) {
             throw new OsstException(sprintf('Unable to format expiration date: %s.', $e->getMessage()), $e);
         }
@@ -287,7 +308,7 @@ final class Osst
 
         $timestamp = $timestamp ?? time() + self::DEFAULT_EXPIRATION_TIME_OFFSET;
 
-        if ($timestamp <= time()) {
+        if ($timestamp !== 0 && $timestamp <= time()) {
             throw OsstException::expirationTimeInPast($timestamp);
         }
 
@@ -344,17 +365,33 @@ final class Osst
     }
 
     /**
+     * Makes the token eternal, so it will never expire.
+     * @return $this
+     */
+    public function makeEternal(): self
+    {
+        $this->expirationTime = 0;
+
+        return $this;
+    }
+
+    /**
      * Check if the token is expired.
-     * @throws OsstException if the expiration date is empty
+     * @throws OsstException if the expiration time is empty
      * @return bool          True if the token is expired, false otherwise
+     */
+    public function isExpired(): bool
+    {
+        return $this->expirationTime !== 0 && $this->expirationTime <= time();
+    }
+
+    /**
+     * @deprecated 1.1 Use isExpired() instead
+     * @psalm-suppress PossiblyUnusedMethod
      */
     public function tokenIsExpired(): bool
     {
-        if (!$this->expirationTime) {
-            throw OsstException::emptyExpirationTime();
-        }
-
-        return $this->expirationTime <= time();
+        return $this->isExpired();
     }
 
     /**
@@ -424,10 +461,6 @@ final class Osst
 
         if ($this->userId <= 0) {
             throw OsstException::invalidUserId($this->userId);
-        }
-
-        if (!$this->expirationTime) {
-            throw OsstException::emptyExpirationTime();
         }
 
         $sql = sprintf('INSERT INTO %s (user_id, token_type, selector, verifier, additional_info, expiration_time) VALUES (:userid, :tokentype, :selector, :verifier, :additional, :expires)', self::TABLE_NAME);

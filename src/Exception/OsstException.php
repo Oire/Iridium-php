@@ -61,7 +61,7 @@ class OsstException extends IridiumException
     /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function propertyAlreadySet(string $property): self
     {
-        return new self(sprintf('%s is already set in token validation.', $property));
+        return new self(sprintf('%s is already set in token validation.', ucfirst($property)));
     }
 
     /** @psalm-suppress PossiblyUnusedReturnValue */
@@ -74,5 +74,11 @@ class OsstException extends IridiumException
     final public static function additionalInfoDecryptionError(CryptException $e): self
     {
         return new self(sprintf('Unable to decrypt additional info: %s.', $e->getMessage()), $e);
+    }
+
+    /** @psalm-suppress PossiblyUnusedReturnValue */
+    final public static function tokenNeverExpires(): self
+    {
+        return new self('The token never expires.');
     }
 }
