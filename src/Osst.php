@@ -385,7 +385,7 @@ final class Osst
         return $this->expirationTime !== 0 && $this->expirationTime <= time();
     }
 
-    /** 
+    /**
      * @deprecated 1.1 Use isExpired() instead
      * @psalm-suppress PossiblyUnusedMethod
      */
