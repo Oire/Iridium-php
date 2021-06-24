@@ -224,14 +224,6 @@ class OsstTest extends TestCase
         (new Osst(self::$db))->persist();
     }
 
-    public function testTryPersistWithEmptyExpirationTime(): void
-    {
-        self::expectException(OsstException::class);
-        self::expectExceptionMessage('Expiration time cannot be empty');
-
-        (new Osst(self::$db))->setUserId(123)->persist();
-    }
-
     public function testInvalidTokenLength(): void
     {
         self::expectException(InvalidTokenException::class);

@@ -381,6 +381,10 @@ Below all of the Osst methods are outlined.
 * `revokeToken(bool $deleteToken = false): void` — Revoke. i.e., invalidate the current token after it is used. If the `$deleteToken` parameter is set to `true`, the token will be deleted from the database, and `getToken()` will return `null`. If it is set to `false` (default), the expiration time for the token will be updated and set to a value in the past. The method returns no value.
 * `static clearExpiredTokens(PDO $dbConnection): int` — Delete all expired tokens from the database. As it is a static method, it receives the database connection as a PDO object. Returns the number of deleted tokens, as integer.
 
+## Changes and Bugfixes
+
+See [changelog](https://github.com/Oire/Iridium-php/blob/master/CHANGELOG.md).
+
 ## Contributing
 
 All contributions are welcome. Please fork, make a feature branch, hack on the code, run tests, push your branch and send a pull request.  

@@ -63,8 +63,8 @@ final class Osst
     /** @var int */
     private $userId = 0;
 
-    /** @var int|null */
-    private $expirationTime;
+    /** @var int */
+    private $expirationTime = 0;
 
     /** @var int|null */
     private $tokenType;
@@ -250,11 +250,11 @@ final class Osst
     /**
      * Check if the token is eternal, i.e., never expires.
      * @throws OsstException If the expiration time is empty
-     * @return bool          True if the token never expires, false otherwise
+     * @return bool          True if the token never expires, false otherwise. Also returns false if an eternal token has been revoked
      */
     public function isEternal(): bool
     {
-        return $this->expirationTime === 0;
+        return $this->expirationTime === 0 && !$this->isExpired();
     }
 
     /**
@@ -382,17 +382,16 @@ final class Osst
      */
     public function isExpired(): bool
     {
-        if (!isset($this->expirationTime)) {
-            throw OsstException::emptyExpirationTime();
-        }
-
         return $this->expirationTime !== 0 && $this->expirationTime <= time();
     }
 
-    /** @deprecated Use `isExpired()` instead */
+    /** 
+     * @deprecated 1.1 Use isExpired() instead
+     * @psalm-suppress PossiblyUnusedMethod
+     */
     public function tokenIsExpired(): bool
     {
-        return $this->isExpired;
+        return $this->isExpired();
     }
 
     /**
@@ -462,10 +461,6 @@ final class Osst
 
         if ($this->userId <= 0) {
             throw OsstException::invalidUserId($this->userId);
-        }
-
-        if (!isset($this->expirationTime)) {
-            throw OsstException::emptyExpirationTime();
         }
 
         $sql = sprintf('INSERT INTO %s (user_id, token_type, selector, verifier, additional_info, expiration_time) VALUES (:userid, :tokentype, :selector, :verifier, :additional, :expires)', self::TABLE_NAME);
