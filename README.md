@@ -387,13 +387,7 @@ See [changelog](https://github.com/Oire/Iridium-php/blob/master/CHANGELOG.md).
 
 ## Contributing
 
-All contributions are welcome. Please fork, make a feature branch, hack on the code, run tests, push your branch and send a pull request.  
-Don't forget to run the code style fixer before committing:
-
-```shell
-./vendor/bin/php-cs-fixer fix
-```
-
+All contributions are welcome. Please fork, make a feature branch, do `composer install`, hack on the code, run tests, push your branch and send a pull request.  
 When your pull request is submitted, make sure all checks passed on CI.
 
 ## License
