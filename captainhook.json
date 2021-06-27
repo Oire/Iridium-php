@@ -1,12 +1,4 @@
 {
-    "commit-msg": {
-        "enabled": true,
-        "actions": []
-    },
-    "pre-push": {
-        "enabled": false,
-        "actions": []
-    },
     "pre-commit": {
         "enabled": true,
         "actions": [
@@ -21,29 +13,39 @@
             }
         ]
     },
-    "prepare-commit-msg": {
-        "enabled": false,
-        "actions": []
-    },
-    "post-commit": {
-        "enabled": false,
-        "actions": []
-    },
     "post-merge": {
-        "enabled": false,
-        "actions": []
-    },
+        "enabled": true,
+        "actions": [
+            {
+                "action": "composer install",
+                "options": {},
+                "conditions": [
+                    {
+                        "exec": "\\CaptainHook\\App\\Hook\\Condition\\FileChanged\\Any",
+                        "args": [
+                            ["composer.json", "composer.lock"]
+                        ]
+                    }
+                ]
+            }
+        }
+    ],
     "post-checkout": {
-        "enabled": false,
-        "actions": []
-    },
-    "post-rewrite": {
-        "enabled": false,
-        "actions": []
-    },
-    "post-change": {
-        "enabled": false,
-        "actions": []
+        "enabled": true,
+        "actions": [
+            {
+                "action": "composer install",
+                "options": {},
+                "conditions": [
+                    {
+                        "exec": "\\CaptainHook\\App\\Hook\\Condition\\FileChanged\\Any",
+                        "args": [
+                            ["composer.json", "composer.lock"]
+                        ]
+                    }
+                ]
+            }
+        ],
     },
     "config": {
         "ansi-colors": false
