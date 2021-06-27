@@ -12,6 +12,8 @@
         "php": ">=7.3"
     },
     "require-dev": {
+        "captainhook/captainhook": "^5.10",
+        "captainhook/plugin-composer": "^5.3",
         "friendsofphp/php-cs-fixer": "*",
         "oire/php-code-style": "dev-master",
         "phpunit/phpunit": "*",
