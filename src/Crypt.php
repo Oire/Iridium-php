@@ -117,6 +117,7 @@ final class Crypt
             throw new DecryptionException('Given cipher text is of incorrect length.');
         }
 
+        /** @var string|false */
         $salt = mb_substr($cipherText, 0, SymmetricKey::SALT_SIZE, self::STRING_ENCODING_8BIT);
 
         if ($salt === false) {
@@ -133,18 +134,21 @@ final class Crypt
             throw new EncryptionException('One or more derived keys are missing.');
         }
 
+        /** @var string|false */
         $iv = mb_substr($cipherText, SymmetricKey::SALT_SIZE, self::IV_SIZE, self::STRING_ENCODING_8BIT);
 
         if ($iv === false) {
             throw new DecryptionException('Invalid initialization vector given.');
         }
 
+        /** @var string|false */
         $hmac = mb_substr($cipherText, -self::HASH_SIZE, null, self::STRING_ENCODING_8BIT);
 
         if ($hmac === false) {
             throw DecryptionException::hmacFailed();
         }
 
+        /** @var string|false */
         $encrypted = mb_substr($cipherText, SymmetricKey::SALT_SIZE + self::IV_SIZE, mb_strlen($cipherText, self::STRING_ENCODING_8BIT) - self::HASH_SIZE - SymmetricKey::SALT_SIZE - self::IV_SIZE, self::STRING_ENCODING_8BIT);
 
         if ($encrypted === false) {

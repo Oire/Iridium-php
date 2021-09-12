@@ -49,6 +49,7 @@ final class Password
             throw new PasswordException('Password must not be empty.');
         }
 
+        /** @var string|null|false */
         $hash = password_hash(Base64::encode(hash(Crypt::HASH_FUNCTION, $password, true)), PASSWORD_DEFAULT);
 
         if ($hash === false || $hash === null) {
