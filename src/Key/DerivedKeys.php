@@ -1,15 +1,11 @@
 <?php
-namespace Oire\Iridium\Tests;
+namespace Oire\Iridium\Key;
 
 use Oire\Iridium\Crypt;
-use Oire\Iridium\Exception\SymmetricKeyException;
-use Oire\Iridium\Key\SymmetricKey;
-use PHPUnit\Framework\TestCase;
-use Oire\Iridium\Key\DerivedKeys;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Manages symmetric keys for data encryption and decryption.
+ * Derive encryption and authentication keys for encryption.
  * Copyright © 2021, Andre Polykanine also known as Menelion Elensúlë, The Magical Kingdom of Oirë, https://github.com/Oire
  * Copyright © 2016 Scott Arciszewski, Paragon Initiative Enterprises, https://paragonie.com.
  * Portions copyright © 2016 Taylor Hornby, Defuse Security Research and Development, https://defuse.ca.
@@ -32,42 +28,57 @@ use Oire\Iridium\Key\DerivedKeys;
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
-class SymmetricKeyTest extends TestCase
+final class DerivedKeys
 {
-    // Oire\Iridium\Base64::encode(hex2bin('000102030405060708090a0b0c0d0e0f'));
-    private const TEST_KEY = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
+    public const SALT_SIZE = 32;
 
-    public function testSetKnownKey(): void
+    /** @var string */
+    private $salt;
+
+    /** @var string */
+    private $encryptionKey;
+
+    /** @var string */
+    private $authenticationKey;
+
+    /**
+     * This value objects holds the keys derived from the provided symmetric key.
+     * Class constructor.
+     * @param string $salt The salt for deriving the keys
+     * @param string $encryptionKey the derived encryption key
+     * @param string $authenticationKey The derived authentication key
+     */
+    public function __construct(string $salt, string $encryptionKey, string $authenticationKey)
     {
-        $symmetricKey = new SymmetricKey(self::TEST_KEY);
-
-        self::assertSame(self::TEST_KEY, $symmetricKey->getKey());
-        self::assertSame(SymmetricKey::KEY_SIZE, mb_strlen($symmetricKey->getRawKey(), Crypt::STRING_ENCODING_8BIT));
+        $this->salt = $salt;
+        $this->encryptionKey = $encryptionKey;
+        $this->authenticationKey = $authenticationKey;
     }
 
-    public function testDeriveKeys(): void
+    /** Getters  */
+
+    public function getSalt(): string
     {
-        $symmetricKey = new SymmetricKey();
-        $derivedKeys = $symmetricKey->deriveKeys();
-
-        self::assertInstanceOf(DerivedKeys::class, $derivedKeys);
-
-        $key = $symmetricKey->getKey();
-        $salt = $derivedKeys->getSalt();
-
-        self::assertTrue($derivedKeys->areValid());
-        self::assertSame(DerivedKeys::SALT_SIZE, mb_strlen($salt, Crypt::STRING_ENCODING_8BIT));
-
-        $derivedKeys = (new SymmetricKey($key))->deriveKeys($salt);
-
-        self::assertTrue($derivedKeys->areValid());
-        self::assertSame($salt, $derivedKeys->getSalt());
+        return $this->salt;
     }
 
-    public function testTrySetInvalidKey(): void
+    public function getEncryptionKey(): string
     {
-        $this->expectException(SymmetricKeyException::class);
+        return $this->encryptionKey;
+    }
 
-        new SymmetricKey('abc');
+    public function getAuthenticationKey(): string
+    {
+        return $this->authenticationKey;
+    }
+
+    /**
+     * Checks if the derived keys are valid.
+     * @return bool Returns true if the keys are valid, false otherwise
+     */
+    public function areValid(): bool
+    {
+        return ($this->salt && $this->encryptionKey && $this->authenticationKey)
+            && mb_strlen($this->salt, Crypt::STRING_ENCODING_8BIT) === self::SALT_SIZE;
     }
 }

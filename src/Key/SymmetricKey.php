@@ -35,7 +35,6 @@ use Oire\Iridium\Exception\SymmetricKeyException;
 final class SymmetricKey
 {
     public const KEY_SIZE = 32;
-    public const SALT_SIZE = 32;
 
     private const ENCRYPTION_INFO = 'Iridium|V1|KeyForEncryption';
     private const AUTHENTICATION_INFO = 'Iridium|V1|KeyForAuthentication';
@@ -91,16 +90,16 @@ final class SymmetricKey
     /**
      * Derive encryption and authentication keys for encrypt-then-MAC.
      * @param  string|null $salt Salt for key derivation. Provide this only for decryption!
-     * @return string[]    An array containing salt, encryptionKey and authenticationKey
+     * @return DerivedKeys    A derived keys object containing salt, encryptionKey and authenticationKey
      */
-    public function deriveKeys(?string $salt = null): array
+    public function deriveKeys(?string $salt = null): DerivedKeys
     {
         if ($salt) {
-            if (mb_strlen($salt, Crypt::STRING_ENCODING_8BIT) !== self::SALT_SIZE) {
+            if (mb_strlen($salt, Crypt::STRING_ENCODING_8BIT) !== DerivedKeys::SALT_SIZE) {
                 throw new SymmetricKeyException('Given salt is of incorrect length.');
             }
         } else {
-            $salt = random_bytes(self::SALT_SIZE);
+            $salt = random_bytes(DerivedKeys::SALT_SIZE);
         }
 
         $encryptionKey = hash_hkdf(Crypt::HASH_FUNCTION, $this->rawKey, 0, self::ENCRYPTION_INFO, $salt);
@@ -115,11 +114,7 @@ final class SymmetricKey
             throw SymmetricKeyException::authenticationKeyFailed();
         }
 
-        return [
-            'salt' => $salt,
-            'encryptionKey' => $encryptionKey,
-            'authenticationKey' => $authenticationKey
-        ];
+        return new DerivedKeys($salt, $encryptionKey, $authenticationKey);
     }
 
     /**

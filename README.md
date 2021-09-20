@@ -96,6 +96,7 @@ The Crypt module is used to encrypt and decrypt data.
 Currently the Crypt module supports only symmetric-key encryption, i.e., encryption and decryption is performed with one shared key.
 
 ### Symmetric Key
+
 This objects holds a key used to encrypt and decrypt data with the Crypt module. First you need to create a key and save it somewhere (i.e., in a .env file):
 
 ```php
@@ -120,8 +121,18 @@ Generally, you will only need the `getKey()` method for storing the key in a saf
 * `__construct(string|null $key = null)` — Class constructor. If a key is provided, it will be applied to create a new SymmetricKey instance. If not, a random key will be generated instead.
 * `getRawKey(): string` — Returns the key in raw binary form. Needed mostly for internal use.
 * `getKey(): string` — Returns the key in readable and storable form. Use this to retrieve a newly generated random key.
-* `deriveKeys(string|null $salt = null): string[]` — Uses [hash key derivation function](https://en.wikipedia.org/wiki/HKDF) to derive encryption and authentication keys and returns an array consisting of the salt, the encryption key and the authentication key. Use this only if you really know what you are doing. It is used internally by the Crypt module. If the salt is provided, derives the keys based on that salt (used for decryption). In vast majority of cases you don’t need to use this method directly.
+* `deriveKeys(string|null $salt = null): DerivedKeys` — Uses [hash key derivation function](https://en.wikipedia.org/wiki/HKDF) to derive encryption and authentication keys and returns a `DerivedKeys` object, see below. Use this only if you really know what you are doing. It is used internally by the Crypt module. If the salt is provided, derives the keys based on that salt (used for decryption). In 99% of cases you don’t need to use this method directly.
 * `__toString(): string` — Returns the readable and storable key when the object is called as a string.
+
+### Derived Keys
+
+The DerivedKeys object holds the keys derived by the `deriveKeys()` method of the symmetric key. Again, in 99% of cases you don’t want to use it, but let’s enumerate its methods.
+
+* `__construct(string $salt, string $encryptionKey, string $authenticationKey)` — Class constructor. Is instantiated by the `deriveKeys()` method of the `SymmetricKey` object.
+* `getSalt(): string` — Gets the encryption salt.
+* `getEncryptionKey(): string` — Gets the derived encryption key.
+* `getAuthenticationKey(): string` — Gets the derived authentication key.
+* `areValid(): bool` — Checks if the derived keys are valid. Returns `true` if the keys are valid, `false` otherwise.
 
 ### Crypt Usage Examples
 
