@@ -7,6 +7,7 @@ use Oire\Iridium\Exception\CryptException;
 use Oire\Iridium\Exception\DecryptionException;
 use Oire\Iridium\Exception\EncryptionException;
 use Oire\Iridium\Exception\SymmetricKeyException;
+use Oire\Iridium\Key\DerivedKeys;
 use Oire\Iridium\Key\SymmetricKey;
 
 /**
@@ -40,7 +41,6 @@ final class Crypt
     public const HASH_SIZE = 48;
     public const ENCRYPTION_ALGORITHM = 'aes-256-ctr';
     public const STRING_ENCODING_8BIT = '8bit';
-
     private const IV_SIZE = 16;
     private const MINIMUM_CIPHER_TEXT_SIZE = 96;
 
@@ -67,19 +67,19 @@ final class Crypt
             throw new EncryptionException(sprintf('Unable to derive keys: %s', $e->getMessage()), $e);
         }
 
-        if (!isset($derivedKeys['salt']) || !isset($derivedKeys['encryptionKey']) || !isset($derivedKeys['authenticationKey'])) {
-            throw new EncryptionException('One or more derived keys are missing.');
+        if (!$derivedKeys->areValid()) {
+            throw new EncryptionException('Derived keys are invalid.');
         }
 
         $iv = random_bytes(self::IV_SIZE);
-        $encrypted = openssl_encrypt($plainText, self::ENCRYPTION_ALGORITHM, $derivedKeys['encryptionKey'], OPENSSL_RAW_DATA, $iv);
+        $encrypted = openssl_encrypt($plainText, self::ENCRYPTION_ALGORITHM, $derivedKeys->getEncryptionKey(), OPENSSL_RAW_DATA, $iv);
 
         if ($encrypted === false) {
             throw new EncryptionException('OpenSSL encryption failed.');
         }
 
-        $cipherText = $derivedKeys['salt'] . $iv . $encrypted;
-        $hmac       = hash_hmac(self::HASH_FUNCTION, $cipherText, $derivedKeys['authenticationKey'], true);
+        $cipherText = $derivedKeys->getSalt() . $iv . $encrypted;
+        $hmac = hash_hmac(self::HASH_FUNCTION, $cipherText, $derivedKeys->getAuthenticationKey(), true);
 
         if ($hmac === false) {
             throw EncryptionException::hmacFailed();
@@ -118,7 +118,7 @@ final class Crypt
         }
 
         /** @var string|false */
-        $salt = mb_substr($cipherText, 0, SymmetricKey::SALT_SIZE, self::STRING_ENCODING_8BIT);
+        $salt = mb_substr($cipherText, 0, DerivedKeys::SALT_SIZE, self::STRING_ENCODING_8BIT);
 
         if ($salt === false) {
             throw new DecryptionException('Invalid salt given.');
@@ -130,12 +130,12 @@ final class Crypt
             throw new DecryptionException(sprintf('Unable to derive keys: %s.', $e->getMessage()), $e);
         }
 
-        if (!isset($derivedKeys['salt']) || !isset($derivedKeys['encryptionKey']) || !isset($derivedKeys['authenticationKey'])) {
-            throw new EncryptionException('One or more derived keys are missing.');
+        if (!$derivedKeys->areValid()) {
+            throw new EncryptionException('Derived keys are invalid');
         }
 
         /** @var string|false */
-        $iv = mb_substr($cipherText, SymmetricKey::SALT_SIZE, self::IV_SIZE, self::STRING_ENCODING_8BIT);
+        $iv = mb_substr($cipherText, DerivedKeys::SALT_SIZE, self::IV_SIZE, self::STRING_ENCODING_8BIT);
 
         if ($iv === false) {
             throw new DecryptionException('Invalid initialization vector given.');
@@ -149,13 +149,18 @@ final class Crypt
         }
 
         /** @var string|false */
-        $encrypted = mb_substr($cipherText, SymmetricKey::SALT_SIZE + self::IV_SIZE, mb_strlen($cipherText, self::STRING_ENCODING_8BIT) - self::HASH_SIZE - SymmetricKey::SALT_SIZE - self::IV_SIZE, self::STRING_ENCODING_8BIT);
+        $encrypted = mb_substr(
+            $cipherText,
+            DerivedKeys::SALT_SIZE + self::IV_SIZE,
+            mb_strlen($cipherText, self::STRING_ENCODING_8BIT) - self::HASH_SIZE - DerivedKeys::SALT_SIZE - self::IV_SIZE,
+            self::STRING_ENCODING_8BIT
+        );
 
         if ($encrypted === false) {
             throw new DecryptionException('Invalid encrypted text given.');
         }
 
-        $message = hash_hmac(self::HASH_FUNCTION, $salt . $iv . $encrypted, $derivedKeys['authenticationKey'], true);
+        $message = hash_hmac(self::HASH_FUNCTION, $salt . $iv . $encrypted, $derivedKeys->getAuthenticationKey(), true);
 
         if ($message === false) {
             throw DecryptionException::hmacFailed();
@@ -165,7 +170,7 @@ final class Crypt
             throw new DecryptionException('HMAC mismatch.');
         }
 
-        $plainText = openssl_decrypt($encrypted, self::ENCRYPTION_ALGORITHM, $derivedKeys['encryptionKey'], OPENSSL_RAW_DATA, $iv);
+        $plainText = openssl_decrypt($encrypted, self::ENCRYPTION_ALGORITHM, $derivedKeys->getEncryptionKey(), OPENSSL_RAW_DATA, $iv);
 
         if ($plainText === false) {
             throw new DecryptionException('OpenSSL decryption failed.');

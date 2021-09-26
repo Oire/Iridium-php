@@ -6,4 +6,6 @@
   Regular dependencies upgrade.
 * [#20](https://github.com/Oire/Iridium-php/pull/20):
   Add support for [Captain Hook](https://github.com/captainhookphp/captainhook), a git hook solution for PHP projects.
+* [#27](https://github.com/Oire/Iridium-php/pull/27):
+  Wrap the internal derived keys into a value object.
 * The `tokenIsExpired()` method is deprecated and will be removed in version 2.0, use `isExpired()` instead.

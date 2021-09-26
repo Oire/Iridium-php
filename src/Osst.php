@@ -43,7 +43,6 @@ final class Osst
     public const DEFAULT_EXPIRATION_DATE_FORMAT = 'Y-m-d H:i:s';
     public const DEFAULT_EXPIRATION_DATE_OFFSET = '+14 days';
     public const DEFAULT_EXPIRATION_TIME_OFFSET = 1209600;
-
     private const TOKEN_SIZE = 36;
     private const SELECTOR_SIZE = 16;
     private const VERIFIER_SIZE = 20;

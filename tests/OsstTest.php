@@ -43,8 +43,7 @@ class OsstTest extends TestCase
     private const TEST_USER_ID = 12345;
     private const TEST_TOKEN_TYPE = 3;
     private const TEST_ADDITIONAL_INFO = '{"oldEmail":"test@example.com","newEmail":"john.doe@example.com"}';
-
-    private const CREATE_TABLE_SQL = <<<SQL
+    private const CREATE_TABLE_SQL = <<<'SQL'
             CREATE TABLE %s (
                 id INTEGER NOT NULL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
