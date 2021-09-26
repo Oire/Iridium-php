@@ -3,9 +3,9 @@ namespace Oire\Iridium\Tests;
 
 use Oire\Iridium\Crypt;
 use Oire\Iridium\Exception\SymmetricKeyException;
+use Oire\Iridium\Key\DerivedKeys;
 use Oire\Iridium\Key\SymmetricKey;
 use PHPUnit\Framework\TestCase;
-use Oire\Iridium\Key\DerivedKeys;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens

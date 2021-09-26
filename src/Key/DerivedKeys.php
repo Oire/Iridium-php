@@ -44,8 +44,8 @@ final class DerivedKeys
     /**
      * This value objects holds the keys derived from the provided symmetric key.
      * Class constructor.
-     * @param string $salt The salt for deriving the keys
-     * @param string $encryptionKey the derived encryption key
+     * @param string $salt              The salt for deriving the keys
+     * @param string $encryptionKey     the derived encryption key
      * @param string $authenticationKey The derived authentication key
      */
     public function __construct(string $salt, string $encryptionKey, string $authenticationKey)
@@ -56,7 +56,6 @@ final class DerivedKeys
     }
 
     /** Getters  */
-
     public function getSalt(): string
     {
         return $this->salt;

@@ -41,7 +41,6 @@ final class Crypt
     public const HASH_SIZE = 48;
     public const ENCRYPTION_ALGORITHM = 'aes-256-ctr';
     public const STRING_ENCODING_8BIT = '8bit';
-
     private const IV_SIZE = 16;
     private const MINIMUM_CIPHER_TEXT_SIZE = 96;
 
@@ -80,7 +79,7 @@ final class Crypt
         }
 
         $cipherText = $derivedKeys->getSalt() . $iv . $encrypted;
-        $hmac       = hash_hmac(self::HASH_FUNCTION, $cipherText, $derivedKeys->getAuthenticationKey(), true);
+        $hmac = hash_hmac(self::HASH_FUNCTION, $cipherText, $derivedKeys->getAuthenticationKey(), true);
 
         if ($hmac === false) {
             throw EncryptionException::hmacFailed();
