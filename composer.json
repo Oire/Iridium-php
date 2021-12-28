@@ -18,6 +18,7 @@
         "oire/php-code-style": "dev-master",
         "phpunit/phpunit": "*",
         "psalm/plugin-phpunit": "*",
+        "squizlabs/php_codesniffer": "^3.6",
         "vimeo/psalm": "dev-master"
     },
     "license": "MIT",
@@ -47,6 +48,10 @@
         "sort-packages": true,
         "preferred-install": {
             "*": "dist"
+        },
+        "allow-plugins": {
+            "composer/package-versions-deprecated": true,
+            "captainhook/plugin-composer": true
         }
     },
     "scripts": {

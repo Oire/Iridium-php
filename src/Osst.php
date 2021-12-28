@@ -16,8 +16,9 @@ use Throwable;
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
  * Implements the split token authentication model proposed by Paragon Initiatives.
- * Copyright © 2021 Andre Polykanine also known as Menelion Elensúlë, The Magical Kingdom of Oirë, https://github.com/Oire
- * Idea Copyright © 2017 Paragon Initiatives, https://paragonie.com/blog/2017/02/split-tokens-token-based-authentication-protocols-without-side-channels
+ * Copyright © 2021 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Idea Copyright © 2017 Paragon Initiatives.
+ * @see https://paragonie.com/blog/2017/02/split-tokens-token-based-authentication-protocols-without-side-channels
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -73,12 +74,15 @@ final class Osst
 
     /**
      * Instantiate a new Osst object.
-     * @param PDO               $dbConnection                Connection to your database
-     * @param string|null       $token                       A user-provided token. Provide this only if you received a token from the user
-     * @param SymmetricKey|null $additionalInfoDecryptionKey The Iridium key to decrypt additional info for the token
+     * @param PDO               $dbConnection      Connection to your database
+     * @param string|null       $token             A user-provided token
+     * @param SymmetricKey|null $additionalInfoKey The Iridium key to decrypt additional info for the token
      */
-    public function __construct(PDO $dbConnection, ?string $token = null, ?SymmetricKey $additionalInfoDecryptionKey = null)
-    {
+    public function __construct(
+        PDO $dbConnection,
+        ?string $token = null,
+        ?SymmetricKey $additionalInfoKey = null
+    ) {
         $this->dbConnection = $dbConnection;
 
         try {
@@ -92,12 +96,18 @@ final class Osst
         }
 
         if ($token) {
-            $this->setToken($token, $additionalInfoDecryptionKey);
+            $this->setToken($token, $additionalInfoKey);
         } else {
             $rawToken = random_bytes(self::TOKEN_SIZE);
             $this->token = Base64::encode($rawToken);
             $this->selector = Base64::encode(mb_substr($rawToken, 0, self::SELECTOR_SIZE, Crypt::STRING_ENCODING_8BIT));
-            $this->hashedVerifier = Base64::encode(hash(Crypt::HASH_FUNCTION, mb_substr($rawToken, self::SELECTOR_SIZE, self::VERIFIER_SIZE, Crypt::STRING_ENCODING_8BIT), true));
+            $this->hashedVerifier = Base64::encode(
+                hash(
+                    Crypt::HASH_FUNCTION,
+                    mb_substr($rawToken, self::SELECTOR_SIZE, self::VERIFIER_SIZE, Crypt::STRING_ENCODING_8BIT),
+                    true
+                )
+            );
         }
     }
 
@@ -126,11 +136,11 @@ final class Osst
 
     /**
      * Set and validate a user-provided token.
-     * @param  string                $token                       The token provided by the user
-     * @param  SymmetricKey|null     $additionalInfoDecryptionKey If not empty, the previously additional info for the token will be decrypted
+     * @param  string                $token             The token provided by the user
+     * @param  SymmetricKey|null     $additionalInfoKey If not empty, the encrypted additional info will be decrypted
      * @throws InvalidTokenException
      */
-    private function setToken(string $token, ?SymmetricKey $additionalInfoDecryptionKey = null): void
+    private function setToken(string $token, ?SymmetricKey $additionalInfoKey = null): void
     {
         try {
             $rawToken = Base64::decode($token);
@@ -144,11 +154,16 @@ final class Osst
 
         $selector = Base64::encode(mb_substr($rawToken, 0, self::SELECTOR_SIZE, Crypt::STRING_ENCODING_8BIT));
 
-        $sql = sprintf('SELECT user_id, token_type, selector, verifier, additional_info, expiration_time FROM %s WHERE selector = :selector', self::TABLE_NAME);
+        $sql = sprintf(
+            'SELECT
+                user_id, token_type, selector, verifier, additional_info, expiration_time
+                FROM %s
+                WHERE selector = :selector',
+            self::TABLE_NAME
+        );
         $statement = $this->dbConnection->prepare($sql);
 
         if (!$statement) {
-            /** @var string */
             $errorMessage = $this->dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
             throw InvalidTokenException::pdoStatementError($errorMessage);
         }
@@ -166,7 +181,13 @@ final class Osst
             throw InvalidTokenException::selectorError();
         }
 
-        $verifier = Base64::encode(hash(Crypt::HASH_FUNCTION, mb_substr($rawToken, self::SELECTOR_SIZE, self::VERIFIER_SIZE, Crypt::STRING_ENCODING_8BIT), true));
+        $verifier = Base64::encode(
+            hash(
+                Crypt::HASH_FUNCTION,
+                mb_substr($rawToken, self::SELECTOR_SIZE, self::VERIFIER_SIZE, Crypt::STRING_ENCODING_8BIT),
+                true
+            )
+        );
 
         if (isset($result['verifier'])) {
             $validVerifier = $result['verifier'];
@@ -197,9 +218,9 @@ final class Osst
         $this->tokenType = isset($result['token_type']) ? (int) $result['token_type'] : null;
 
         if (isset($result['additional_info'])) {
-            if ($additionalInfoDecryptionKey) {
+            if ($additionalInfoKey) {
                 try {
-                    $this->additionalInfo = Crypt::decrypt($result['additional_info'], $additionalInfoDecryptionKey);
+                    $this->additionalInfo = Crypt::decrypt($result['additional_info'], $additionalInfoKey);
                 } catch (CryptException $e) {
                     throw OsstException::additionalInfoDecryptionError($e);
                 }
@@ -249,7 +270,7 @@ final class Osst
     /**
      * Check if the token is eternal, i.e., never expires.
      * @throws OsstException If the expiration time is empty
-     * @return bool          True if the token never expires, false otherwise. Also returns false if an eternal token has been revoked
+     * @return bool          True if the token never expires, false otherwise or if the token was revoked
      */
     public function isEternal(): bool
     {
@@ -259,7 +280,7 @@ final class Osst
     /**
      * Get the expiration time of the token as a DateTime immutable object.
      * @throws OsstException     If the token never expires
-     * @return DateTimeImmutable Returns the expiration time as a DateTimeImmutable in the default time zone set in PHP settings
+     * @return DateTimeImmutable Returns the expiration time in the default time zone
      */
     public function getExpirationDate(): DateTimeImmutable
     {
@@ -295,7 +316,7 @@ final class Osst
 
     /**
      * Set the expiration time for the token using timestamp.
-     * @param  int           $timestamp The timestamp when the token should expire, defaults to 1209600 seconds, i.e., 14 days
+     * @param  int           $timestamp The timestamp when the token should expire, defaults to +14 days
      * @throws OsstException
      * @return $this
      */
@@ -305,7 +326,7 @@ final class Osst
             throw OsstException::propertyAlreadySet('Expiration time');
         }
 
-        $timestamp = $timestamp ?? time() + self::DEFAULT_EXPIRATION_TIME_OFFSET;
+        $timestamp ??= time() + self::DEFAULT_EXPIRATION_TIME_OFFSET;
 
         if ($timestamp !== 0 && $timestamp <= time()) {
             throw OsstException::expirationTimeInPast($timestamp);
@@ -318,7 +339,7 @@ final class Osst
 
     /**
      * Set the expiration time for the token using relative time.
-     * @param string $offset The time interval the token expires in. The default value is `'+14 days'`. Must be a valid relative date format.
+     * @param string $offset The time interval the token expires in. Detaults to +14 days
      * @see https://www.php.net/manual/en/datetime.formats.relative.php
      * @throws OsstException
      * @return $this
@@ -462,11 +483,17 @@ final class Osst
             throw OsstException::invalidUserId($this->userId);
         }
 
-        $sql = sprintf('INSERT INTO %s (user_id, token_type, selector, verifier, additional_info, expiration_time) VALUES (:userid, :tokentype, :selector, :verifier, :additional, :expires)', self::TABLE_NAME);
+        $sql = sprintf(
+            'INSERT INTO %s (
+                user_id, token_type, selector, verifier, additional_info, expiration_time
+            ) VALUES (
+                :userid, :tokentype, :selector, :verifier, :additional, :expires
+            )',
+            self::TABLE_NAME
+        );
         $statement = $this->dbConnection->prepare($sql);
 
         if (!$statement) {
-            /** @var string */
             $errorMessage = $this->dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
             throw InvalidTokenException::pdoStatementError($errorMessage);
         }
@@ -489,7 +516,7 @@ final class Osst
 
     /**
      * Revoke the token.
-     * @param  bool          $deleteToken If true, the token will be deleted from the database. If false (default), it will be updated with the expiration time set in the past
+     * @param  bool          $deleteToken If true, token is deleted from the database. If false (default), it is expired
      * @throws OsstException
      */
     public function revokeToken(bool $deleteToken = false): void
@@ -501,10 +528,11 @@ final class Osst
         $this->expirationTime = time() - self::DEFAULT_EXPIRATION_TIME_OFFSET;
 
         if ($deleteToken) {
-            $statement = $this->dbConnection->prepare(sprintf('DELETE FROM %s WHERE selector = :selector', self::TABLE_NAME));
+            $statement = $this->dbConnection->prepare(
+                sprintf('DELETE FROM %s WHERE selector = :selector', self::TABLE_NAME)
+            );
 
             if (!$statement) {
-                /** @var string */
                 $errorMessage = $this->dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
                 throw InvalidTokenException::pdoStatementError($errorMessage);
             }
@@ -515,10 +543,11 @@ final class Osst
                 throw InvalidTokenException::sqlError($e);
             }
         } else {
-            $statement = $this->dbConnection->prepare(sprintf('UPDATE %s SET expiration_time = :expires WHERE selector = :selector', self::TABLE_NAME));
+            $statement = $this->dbConnection->prepare(
+                sprintf('UPDATE %s SET expiration_time = :expires WHERE selector = :selector', self::TABLE_NAME)
+            );
 
             if (!$statement) {
-                /** @var string */
                 $errorMessage = $this->dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
                 throw InvalidTokenException::pdoStatementError($errorMessage);
             }
@@ -548,7 +577,6 @@ final class Osst
         $statement = $dbConnection->prepare(sprintf('DELETE FROM %s WHERE expiration_time <= :time', self::TABLE_NAME));
 
         if (!$statement) {
-            /** @var string */
             $errorMessage = $dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
             throw InvalidTokenException::pdoStatementError($errorMessage);
         }

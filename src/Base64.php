@@ -5,7 +5,7 @@ use Oire\Iridium\Exception\Base64Exception;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Copyright © 2021, Andre Polykanine also known as Menelion Elensúlë, the Magical Kingdom of Oirë, https://github.com/Oire
+ * Copyright © 2021, Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  *  Portions copyright © 2016 Paragon Initiative Enterprises.
  *  Portions copyright © 2014 Steve "Sc00bz" Thomas (steve at tobtu dot com)
  *
@@ -37,7 +37,7 @@ final class Base64
     /**
      * Encode into URL-safe Base64.
      * @param  string          $data            The data to be encoded
-     * @param  bool            $preservePadding If set to true, will replace padding Equals signs with tildes. If set to false (default), will truncate padding
+     * @param  bool            $preservePadding If true, replaces ='s with ~'s. If false (default), truncates padding
      * @throws Base64Exception if encoding to base64 fails
      * @return string          The encoded data
      */
@@ -45,7 +45,9 @@ final class Base64
     {
         $b64 = base64_encode($data);
 
-        return $preservePadding ? strtr($b64, self::EXT_WHAT, self::EXT_WITH) : strtr(rtrim($b64, '='), self::WHAT, self::WITH);
+        return $preservePadding
+            ? strtr($b64, self::EXT_WHAT, self::EXT_WITH)
+            : strtr(rtrim($b64, '='), self::WHAT, self::WITH);
     }
 
     /**
