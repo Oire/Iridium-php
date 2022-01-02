@@ -9,7 +9,7 @@
         }
     ],
     "require": {
-        "php": ">=7.3"
+        "php": ">=7.4"
     },
     "require-dev": {
         "captainhook/captainhook": "*",
@@ -18,7 +18,7 @@
         "oire/php-code-style": "dev-master",
         "phpunit/phpunit": "*",
         "psalm/plugin-phpunit": "*",
-        "squizlabs/php_codesniffer": "^3.6",
+        "squizlabs/php_codesniffer": "*",
         "vimeo/psalm": "dev-master"
     },
     "license": "MIT",
