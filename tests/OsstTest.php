@@ -11,9 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Implements the split token authentication model proposed by Paragon Initiatives.
- * Copyright © 2021 Andre Polykanine also known as Menelion Elensúlë, The Magical Kingdom of Oirë, https://github.com/Oire
- * Idea Copyright © 2017 Paragon Initiatives, https://paragonie.com/blog/2017/02/split-tokens-token-based-authentication-protocols-without-side-channels
+ * Copyright © 2021 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -72,7 +70,16 @@ class OsstTest extends TestCase
     public function testSetKnownToken(): void
     {
         $expirationTime = (new DateTimeImmutable())->modify(Osst::DEFAULT_EXPIRATION_DATE_OFFSET)->getTimestamp();
-        $statement = self::$db->prepare(sprintf('INSERT INTO %s (user_id, token_type, selector, verifier, additional_info, expiration_time) VALUES (:userid, :tokentype, :selector, :verifier, :additional, :expires)', Osst::TABLE_NAME));
+        $statement = self::$db->prepare(
+            sprintf(
+                'INSERT INTO %s (
+                    user_id, token_type, selector, verifier, additional_info, expiration_time
+                ) VALUES (
+                    :userid, :tokentype, :selector, :verifier, :additional, :expires
+                )',
+                Osst::TABLE_NAME
+            )
+        );
         $statement->execute([
             ':userid' => self::TEST_USER_ID,
             ':tokentype' => self::TEST_TOKEN_TYPE,
@@ -97,7 +104,11 @@ class OsstTest extends TestCase
         $startOsst = new Osst(self::$db);
         $expirationTime = time() + 3600;
         $token = $startOsst->getToken();
-        $startOsst->setUserId(self::TEST_USER_ID)->setExpirationTime($expirationTime)->setAdditionalInfo(self::TEST_ADDITIONAL_INFO)->persist();
+        $startOsst
+            ->setUserId(self::TEST_USER_ID)
+            ->setExpirationTime($expirationTime)
+            ->setAdditionalInfo(self::TEST_ADDITIONAL_INFO)
+            ->persist();
 
         $osst = new Osst(self::$db, $token);
 
@@ -114,7 +125,11 @@ class OsstTest extends TestCase
         $startOsst = new Osst(self::$db);
         $expirationTime = (new DateTimeImmutable())->modify(Osst::DEFAULT_EXPIRATION_DATE_OFFSET)->getTimestamp();
         $token = $startOsst->getToken();
-        $startOsst->setUserId(self::TEST_USER_ID)->setTokenType(self::TEST_TOKEN_TYPE)->setExpirationOffset(Osst::DEFAULT_EXPIRATION_DATE_OFFSET)->persist();
+        $startOsst
+            ->setUserId(self::TEST_USER_ID)
+            ->setTokenType(self::TEST_TOKEN_TYPE)
+            ->setExpirationOffset(Osst::DEFAULT_EXPIRATION_DATE_OFFSET)
+            ->persist();
 
         $osst = new Osst(self::$db, $token);
 
@@ -131,7 +146,11 @@ class OsstTest extends TestCase
         $startOsst = new Osst(self::$db);
         $expirationDate = (new DateTimeImmutable())->modify(Osst::DEFAULT_EXPIRATION_DATE_OFFSET);
         $token = $startOsst->getToken();
-        $startOsst->setUserId(self::TEST_USER_ID)->setTokenType(self::TEST_TOKEN_TYPE)->setExpirationDate($expirationDate)->persist();
+        $startOsst
+            ->setUserId(self::TEST_USER_ID)
+            ->setTokenType(self::TEST_TOKEN_TYPE)
+            ->setExpirationDate($expirationDate)
+            ->persist();
 
         $osst = new Osst(self::$db, $token);
 
@@ -139,7 +158,10 @@ class OsstTest extends TestCase
         self::assertSame(self::TEST_USER_ID, $osst->getUserId());
         self::assertSame(self::TEST_TOKEN_TYPE, $osst->getTokenType());
         self::assertSame($expirationDate->getTimestamp(), $osst->getExpirationDate()->getTimestamp());
-        self::assertSame($expirationDate->format(Osst::DEFAULT_EXPIRATION_DATE_FORMAT), $osst->getExpirationDateFormatted());
+        self::assertSame(
+            $expirationDate->format(Osst::DEFAULT_EXPIRATION_DATE_FORMAT),
+            $osst->getExpirationDateFormatted()
+        );
         self::assertFalse($osst->isEternal());
         self::assertNull($osst->getAdditionalInfo());
     }
@@ -148,7 +170,11 @@ class OsstTest extends TestCase
     {
         $startOsst = new Osst(self::$db);
         $token = $startOsst->getToken();
-        $startOsst->setUserId(self::TEST_USER_ID)->makeEternal()->setAdditionalInfo(self::TEST_ADDITIONAL_INFO)->persist();
+        $startOsst
+            ->setUserId(self::TEST_USER_ID)
+            // ->makeEternal()
+            ->setAdditionalInfo(self::TEST_ADDITIONAL_INFO)
+            ->persist();
 
         $osst = new Osst(self::$db, $token);
 
@@ -165,7 +191,11 @@ class OsstTest extends TestCase
         $startOsst = new Osst(self::$db);
         $expirationDate = (new DateTimeImmutable())->modify(Osst::DEFAULT_EXPIRATION_DATE_OFFSET);
         $token = $startOsst->getToken();
-        $startOsst->setUserId(self::TEST_USER_ID)->setTokenType(self::TEST_TOKEN_TYPE)->setExpirationDate($expirationDate)->persist();
+        $startOsst
+            ->setUserId(self::TEST_USER_ID)
+            ->setTokenType(self::TEST_TOKEN_TYPE)
+            ->setExpirationDate($expirationDate)
+            ->persist();
 
         $osst = new Osst(self::$db, $token);
 

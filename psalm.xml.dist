@@ -3,7 +3,6 @@
     errorLevel="1"
     resolveFromConfigFile="true"
     strictBinaryOperands="true"
-    allowPhpStormGenerics="true"
     findUnusedVariablesAndParams="true"
     findUnusedCode="true"
     ensureArrayStringOffsetsExist="true"

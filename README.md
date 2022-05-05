@@ -10,7 +10,7 @@ This library consists of several classes, or modules, and can be used for hashin
 
 ## Requirements
 
-Requires PHP 7.3 or later with _PDO_, _Mbstring_ and _OpenSSL_ enabled.
+Requires PHP 7.4 or later with _PDO_, _Mbstring_ and _OpenSSL_ enabled.
 
 ## Installation
 
@@ -28,7 +28,7 @@ Run `./vendor/bin/phpunit` in the project directory.
 
 Run `./vendor/bin/psalm` in the project directory.
 
-## Base64 Handling, URL-safe Way
+## 🖇 Base64 Handling, URL-safe Way
 
 The Base64 module encodes data to Base64 URL-safe way and decodes encoded data.
 
@@ -89,7 +89,7 @@ The Base64 class has the following methods:
 * `static encode(string $data, bool $preservePadding = false): string` — Encodes provided data into URL-safe Base64. If `preservePadding` is set to `true`, the padding `=` signs will be replaced by tildes (`~`). If set to `false` (default), padding signs will be truncated.
 * `static decode(string $encodedData): string` — decodes provided Base64 data and returns the original string.
 
-## Crypt
+## 🗝 Crypt
 
 The Crypt module is used to encrypt and decrypt data.  
 **Note**! Do not use this for managing passwords! Passwords must not be encrypted, they must be *hashed* instead. To manage passwords, use the Password module (see below).  
@@ -116,17 +116,17 @@ AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8
 
 #### Symmetric Key Methods
 
-Generally, you will only need the `getKey()` method for storing the key in a safe place. However, let’s describe all the methods for the sake of completeness:
+Generally, you will only need the `getKey()` method for storing the key in a safe place. You can also benefit from using the `__toString()` method and treat the key object as a string. However, let’s describe all the methods for the sake of completeness:
 
 * `__construct(string|null $key = null)` — Class constructor. If a key is provided, it will be applied to create a new SymmetricKey instance. If not, a random key will be generated instead.
 * `getRawKey(): string` — Returns the key in raw binary form. Needed mostly for internal use.
 * `getKey(): string` — Returns the key in readable and storable form. Use this to retrieve a newly generated random key.
-* `deriveKeys(string|null $salt = null): DerivedKeys` — Uses [hash key derivation function](https://en.wikipedia.org/wiki/HKDF) to derive encryption and authentication keys and returns a `DerivedKeys` object, see below. Use this only if you really know what you are doing. It is used internally by the Crypt module. If the salt is provided, derives the keys based on that salt (used for decryption). In 99% of cases you don’t need to use this method directly.
+* `deriveKeys(string|null $salt = null): DerivedKeys` — Uses [hash key derivation function](https://en.wikipedia.org/wiki/HKDF) to derive encryption and authentication keys and returns a `DerivedKeys` object, see below. Use this only if you really know what you are doing. It is used internally by the Crypt module. If the salt is provided, derives the keys based on that salt (used for decryption). In 99,(9)% of cases you don’t need to use this method directly.
 * `__toString(): string` — Returns the readable and storable key when the object is called as a string.
 
 ### Derived Keys
 
-The DerivedKeys object holds the keys derived by the `deriveKeys()` method of the symmetric key. Again, in 99% of cases you don’t want to use it, but let’s enumerate its methods.
+The DerivedKeys object holds the keys derived by the `deriveKeys()` method of the symmetric key. Again, in 99,(9)% of cases you don’t want to use it, but let’s enumerate its methods.
 
 * `__construct(string $salt, string $encryptionKey, string $authenticationKey)` — Class constructor. Is instantiated by the `deriveKeys()` method of the `SymmetricKey` object.
 * `getSalt(): string` — Gets the encryption salt.
@@ -165,7 +165,7 @@ The Crypt class has the following methods:
 * `static Decrypt(string $encryptedData, SymmetricKey $key): string` — Decrypts previously encrypted data with the same key they were encrypted with and returns the original string.
 * `static swapKey(string $data, SymmetricKey $oldKey, SymmetricKey $newKey): string` — Reencrypts encrypted data with a different key and returns the newly encrypted data.
 
-## Password
+## 🔒 Password
 
 The Password class is used to hash passwords and verify that a provided hash is valid.
 
@@ -193,19 +193,20 @@ To check whether a provided password is valid, use the following:
 
 ```php
 try {
-    $passwordIsValid = Password::check($_POST['password'], $hashFromDatabase, $symmetricKey);
+    $isPasswordValid = Password::check($_POST['password'], $hashFromDatabase, $symmetricKey);
 } catch (PasswordException $e) {
     // Handle errors. Something went wrong: most often it's a wrong or corrupted key
 }
 
-if ($passwordIsValid) {
+if ($isPasswordValid) {
     // OK
 } else {
     // Wrong password
 }
 ```
 
-You can also use Crypt to reencrypt the password with another key, just use `Crypt::swapKey()` and provide your password hash to it.
+You can also use Crypt to reencrypt the password with another key, just use `Crypt::swapKey()` and provide your password hash to it.  
+Remember that you cannot "decrypt" a password and obviously must not store unhashed plain-text passwords, this poses a huge security risk.
 
 ### Methods
 
@@ -214,7 +215,7 @@ The Password class has the following methods:
 * `static Lock(string $password, SymmetricKey $key): string` — Locks, i.e., hashes a password and encrypts it with a given key. Returns the encrypted hash in readable and storable format. A hashed password cannot be restored, so it is safe to be stored in a database.
 * `static Check(string $password, string $encryptedHash, SymmetricKey $key): bool` — Verifies whether a given password matches the provided hash. Returns `true` on success and `false` on failure.
 
-## Osst, Simple Yet Secure Tokens Suitable for Authentication Cookies and Password Recovery
+## 🍪 Osst, Simple Yet Secure Tokens Suitable for Authentication Cookies and Password Recovery
 
 Oirë Simple Split Tokens (Osst) is a class inside Iridium that can be used for generating and validating secure tokens suitable for authentication cookies, password recovery, API keys and various other tasks.  
 
@@ -230,7 +231,7 @@ Support for popular ORMs is planned for a future version.
 
 #### Create a Table
 
-Iridium tries to be as database agnostic as possible (MySQL and SQLite were tested, the latter actually powers the unit tests).  
+Iridium tries to be as database agnostic as possible (MySQL and SQLite were tested, the latter actually powers the tests).  
 First you need to create the `iridium_tokens` table. For mySQL the statement is as follows:
 
 ```sql
@@ -255,10 +256,10 @@ The field lengths are optimal, the only one you may need to adjust is `additiona
 
 #### Create a Token
 
-First you need to create a token. There are some **required** properties (marked in bold) and some *optional* ones (marked in italic) you can set. If you don’t set one or more of the required properties, an `OsstException` will be thrown.
+First you need to create a token. There are some **required** properties and some *optional* ones you can set. If you don’t set one or more of the required properties, an `OsstException` will be thrown.
 
-* `userId`, **required** — ID of the user the token belongs to, as an integer.
-* `expirationTime`, **required** — Time when the token expires. Stored as timestamp (big integer), but can be set in various ways, see below. If set to `0`, the token is eternal, i.e., it never expires.
+* `userId`, **required** — ID of the user the token belongs to, as an unsigned integer.
+* `expirationTime`, *optional* — Time when the token expires. Stored as timestamp (big integer), but can be set in various ways, see below. If not set or set to `0`, the token is eternal, i.e., it never expires.
 * `tokenType`, *optional* — If you want to perform an additional check of the token (say, separate password recovery tokens from e-mail change tokens), you may set a token type as an integer.
 * `additionalInfo`, *optional* — Any additional information you want to convey with the token, as string. For instance, you can pass some JSON data here. The information can be additionally encrypted, see below.
 
@@ -277,7 +278,7 @@ $osst = (new Osst($dbConnection))
 ```
 
 Use `$osst->getToken()` to actually get the newly created token as a string.  
-If you want to create a non-expirable token, either use `makeEternal()` instead of `setExpirationTime()`, or use `setExpirationTime(0)`.
+If you want to create a non-expirable token, either use `makeEternal()` instead of `setExpirationTime()` for code readability, or skip this call altogether.
 
 #### Set and Validate a User-Provided Token
 
@@ -302,7 +303,7 @@ if ($osst->isExpired()) {
 
 #### Revoke a Token
 
-After a token is used once for authentication, password reset and other sensitive operation, is expired or compromised, you must revoke, i.e., invalidate it. If you use Iridium tokens as API keys, tokens for unsubscribing from email lists and so on, you can make your token eternal or set the expiration time far in the future and not revoke the token after first use, certainly. There are two ways of revoking a token:
+After a token is used once for authentication, password reset and other sensitive operation, is expired or compromised, you must revoke, i.e., invalidate it. If you use Iridium tokens as API keys, tokens for unsubscribing from email lists and so on, you can make your token eternal or set the expiration time far in the future and not revoke the token after first use, certainly. If an eternal token is compromised, you must revoke it, also. There are two ways of revoking a token:
 
 * Setting the expiration time for the token in the past (default);
 * Deleting the token from the database whatsoever. To do this, pass `true` as the parameter to the `revokeToken()` method:
@@ -324,7 +325,7 @@ $deletedTokens = Osst::clearExpiredTokens($dbConnection);
 
 You may set expiration time in three different ways, as you like:
 
-* `setExpirationTime()` — Accepts a raw timestamp as integer. If null, defaults to current time plus 14 days. If set to `0`, the token is eternal and never expires.
+* `setExpirationTime()` — Accepts a raw timestamp as integer. If set to `null` or `0`, the token is eternal and never expires.
 * `setExpirationDate()` — Accepts a `DateTimeImmutable` object.
 * `setExpirationOffset()` — Accepts a [relative datetime format](https://www.php.net/manual/en/datetime.formats.relative.php). Default is `+14 days`.
 
@@ -349,9 +350,9 @@ $key = new SymmetricKey();
 // Store the key somewhere safe, i.e., in an environment variable. You can safely cast it to string for that (see above)
 $additionalInfo = '{"oldEmail": "john@example.com", "newEmail": "john.doe@example.com"}';
 $osst = (new Osst($dbConnection))
-    ->setUserId(123)
+    ->setUserId($user->getId())
     ->setExpirationOffset('+30 minutes')
-    ->setTokenType(3)
+    ->setTokenType(self::TOKEN_TYPE_CHANGE_EMAIL)
     ->setAdditionalInfo($additionalInfo, $key)
     ->persist();
 ```
@@ -378,11 +379,11 @@ Below all of the Osst methods are outlined.
 * `getExpirationTime(): int` — Get expiration time for the token as raw timestamp. Returns integer.
 * `getExpirationDate(): DateTimeImmutable` — Get expiration time for the token as a DateTimeImmutable object. Returns the date in the current time zone of your PHP server.
 * `getExpirationDateFormatted(string $format = 'Y-m-d H:i:s'): string` — Get expiration time for the token as date string. The default format is `2020-11-15 12:34:56`. The `$format` parameter must be a valid [date format](https://www.php.net/manual/en/function.date.php).
-* `setExpirationTime(int|null $timestamp = null): self` — Set expiration time for the token as a raw timestamp. If the timestamp is null, defaults to the current time plus 14 days.
-* `makeEternal(): self` — Makes the token eternal, so it will never expire until you revoke it manually. Returns `$this` for chainability.
+* `setExpirationTime(int|null $timestamp = null): self` — Set expiration time for the token as a raw timestamp. If the timestamp is set to `null` or `0`, the token never expires.
+* `makeEternal(): self` — A convenience method that makes the token eternal, so it will never expire until you revoke it manually. Returns `$this` for chainability.
 * `setExpirationOffset(string $offset = '+14 days'): self` — Set expiration time for the token as a relative time offset. The default value is `+14 days`. The `$offset` parameter must be a valid [relative time format](https://www.php.net/manual/en/datetime.formats.relative.php). Returns `$this` for chainability.
 * `setExpirationDate(DateTimeImmutable $expirationDate): self` — Set expiration time for the token as a [DateTimeImmutable](https://www.php.net/manual/en/class.datetimeimmutable.php) object. Returns `$this` for chainability.
-* `isEternal(): bool` — check if the token is eternal and never expires. Returns `true` if the token is eternal, `false` if it has expiration time set in the future.
+* `isEternal(): bool` — check if the token is eternal and never expires. Returns `true` if the token is eternal, `false` if it has expiration time set in the future or already expired.
 * `isExpired(): bool` — Check if the token is expired. Returns `true` if the token has already expired, `false` otherwise.
 * `getTokenType(): int|null` — Get the type for the current token. Returns integer if the token type was set before, or null if the token has no type.
 * `setTokenType(int|null $tokenType): self` — Set the type for the current token, as integer or null. Returns `$this` for chainability.
@@ -398,10 +399,21 @@ See [changelog](https://github.com/Oire/Iridium-php/blob/master/CHANGELOG.md).
 
 ## Contributing
 
-All contributions are welcome. Please fork, make a feature branch, do `composer install`, hack on the code, run tests, push your branch and send a pull request.  
+All contributions are welcome. Please fork, make a feature branch, do `composer install`, hack on the code, commit, push your branch and send a pull request.
+
+Before committing, don’t forget to run all the needed checks, otherwise the CI will complain afterwards:
+
+```shell
+./vendor/bin/phpunit
+./vendor/bin/psalm
+./vendor/bin/php-cs-fixer fix
+./vendor/bin/phpcs .
+```
+
+If PHPCodeSniffer finds any code style errors, fix them in your code.  
 When your pull request is submitted, make sure all checks passed on CI.
 
 ## License
 
-Copyright © 2021, Andre Polykanine also known as Menelion Elensúlë, [The Magical Kingdom of Oirë](https://github.com/Oire/).  
+Copyright © 2021-2022, Andre Polykanine also known as Menelion Elensúlë, [The Magical Kingdom of Oirë](https://github.com/Oire/).  
 This software is licensed under an MIT license.

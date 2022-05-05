@@ -6,9 +6,7 @@ use Throwable;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Implements the split token authentication model proposed by Paragon Initiatives.
- * Copyright © 2021 Andre Polykanine also known as Menelion Elensúlë, The Magical Kingdom of Oirë, https://github.com/Oire
- * Idea Copyright © 2017 Paragon Initiatives, https://paragonie.com/blog/2017/02/split-tokens-token-based-authentication-protocols-without-side-channels
+ * Copyright © 2021 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal

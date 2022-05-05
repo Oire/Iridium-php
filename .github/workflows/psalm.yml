@@ -3,12 +3,12 @@ name: Psalm Analyze
 on: [push, pull_request]
 
 jobs:
-  phpStan:
+  psalm:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
-        php: [8.0, 7.4, 7.3]
+        php: [8.1, 8.0, 7.4]
         stability: [prefer-lowest, prefer-stable]
 
     name: P${{ matrix.php }} - ${{ matrix.stability }}
