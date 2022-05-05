@@ -39,12 +39,6 @@ class OsstException extends IridiumException
     }
 
     /** @psalm-suppress PossiblyUnusedReturnValue */
-    final public static function emptyExpirationTime(): self
-    {
-        return new self('Expiration time cannot be empty, set or create the token first.');
-    }
-
-    /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function expirationTimeInPast(int $expirationTime): self
     {
         return new self(

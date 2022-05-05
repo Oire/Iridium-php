@@ -31,15 +31,9 @@ use Oire\Iridium\Crypt;
 final class DerivedKeys
 {
     public const SALT_SIZE = 32;
-
-    /** @var string */
-    private $salt;
-
-    /** @var string */
-    private $encryptionKey;
-
-    /** @var string */
-    private $authenticationKey;
+    private string $salt;
+    private string $encryptionKey;
+    private string $authenticationKey;
 
     /**
      * This value objects holds the keys derived from the provided symmetric key.

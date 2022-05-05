@@ -37,12 +37,8 @@ final class SymmetricKey
     public const KEY_SIZE = 32;
     private const ENCRYPTION_INFO = 'Iridium|V1|KeyForEncryption';
     private const AUTHENTICATION_INFO = 'Iridium|V1|KeyForAuthentication';
-
-    /** @var string */
-    private $key;
-
-    /** @var string */
-    private $rawKey;
+    private string $key;
+    private string $rawKey;
 
     /**
      * Instantiate a new Symmetric Key object.

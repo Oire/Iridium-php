@@ -172,7 +172,7 @@ class OsstTest extends TestCase
         $token = $startOsst->getToken();
         $startOsst
             ->setUserId(self::TEST_USER_ID)
-            ->makeEternal()
+            // ->makeEternal()
             ->setAdditionalInfo(self::TEST_ADDITIONAL_INFO)
             ->persist();
 

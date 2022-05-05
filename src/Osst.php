@@ -48,29 +48,14 @@ final class Osst
     private const SELECTOR_SIZE = 16;
     private const VERIFIER_SIZE = 20;
 
-    /** @var PDO */
-    private $dbConnection;
-
-    /** @var string|null */
-    private $token;
-
-    /** @var string|null */
-    private $selector;
-
-    /** @var string|null */
-    private $hashedVerifier;
-
-    /** @var int */
-    private $userId = 0;
-
-    /** @var int */
-    private $expirationTime = 0;
-
-    /** @var int|null */
-    private $tokenType;
-
-    /** @var string|null */
-    private $additionalInfo;
+    private PDO $dbConnection;
+    private ?string $token = null;
+    private ?string $selector = null;
+    private ?string $hashedVerifier = null;
+    private int $userId = 0;
+    private int $expirationTime = 0;
+    private ?int $tokenType = null;
+    private ?string $additionalInfo = null;
 
     /**
      * Instantiate a new Osst object.
@@ -174,7 +159,7 @@ final class Osst
             throw InvalidTokenException::sqlError($e);
         }
 
-        /** @var string[] */
+        /** @var string[] $result */
         $result = $statement->fetch();
 
         if (!$result) {
@@ -209,12 +194,7 @@ final class Osst
             throw OsstException::invalidUserId(0);
         }
 
-        if (isset($result['expiration_time'])) {
-            $this->expirationTime = (int) $result['expiration_time'];
-        } else {
-            throw OsstException::emptyExpirationTime();
-        }
-
+        $this->expirationTime = isset($result['expiration_time']) ? (int) $result['expiration_time'] : 0;
         $this->tokenType = isset($result['token_type']) ? (int) $result['token_type'] : null;
 
         if (isset($result['additional_info'])) {

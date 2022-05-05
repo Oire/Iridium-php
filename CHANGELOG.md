@@ -8,4 +8,5 @@
   Add support for [Captain Hook](https://github.com/captainhookphp/captainhook), a git hook solution for PHP projects.
 * [#27](https://github.com/Oire/Iridium-php/pull/27):
   Wrap the internal derived keys into a value object.
+  * Drop support for PHP 7.3, the minimum version is 7.4.
 * The `tokenIsExpired()` method is deprecated and will be removed in version 2.0, use `isExpired()` instead.
