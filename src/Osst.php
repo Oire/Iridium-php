@@ -47,7 +47,6 @@ final class Osst
     private const TOKEN_SIZE = 36;
     private const SELECTOR_SIZE = 16;
     private const VERIFIER_SIZE = 20;
-
     private PDO $dbConnection;
     private ?string $token = null;
     private ?string $selector = null;
