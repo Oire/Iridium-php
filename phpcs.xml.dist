@@ -2,6 +2,8 @@
 <ruleset name="Oire">
     <exclude-pattern>*/.git/*</exclude-pattern>
     <exclude-pattern>*/vendor/*</exclude-pattern>
+    <include-pattern>*src/*</include-pattern>
+    <include-pattern>*/tests/*</include-pattern>
     <arg name="no-colors"/>
     <arg name="no-cache"/>
 
