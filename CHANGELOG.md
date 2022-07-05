@@ -1,3 +1,8 @@
+# Version 1.2
+
+* [#52](https://github.com/Oire/Iridium-php/pull/52):
+  Add release notes config; Add PHP CodeSniffer to Github Actions CI.
+
 # Version 1.1
 
 * [#19](https://github.com/Oire/Iridium-php/pull/19):
