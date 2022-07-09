@@ -36,6 +36,7 @@ class SymmetricKeyTest extends TestCase
     // Oire\Iridium\Base64::encode(hex2bin('000102030405060708090a0b0c0d0e0f'));
     private const TEST_KEY = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
 
+    /** @psalm-suppress DeprecatedClass */
     public function testSetKnownKey(): void
     {
         $symmetricKey = new SymmetricKey(self::TEST_KEY);
@@ -44,6 +45,7 @@ class SymmetricKeyTest extends TestCase
         self::assertSame(SymmetricKey::KEY_SIZE, mb_strlen($symmetricKey->getRawKey(), Crypt::STRING_ENCODING_8BIT));
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testDeriveKeys(): void
     {
         $symmetricKey = new SymmetricKey();
@@ -63,6 +65,7 @@ class SymmetricKeyTest extends TestCase
         self::assertSame($salt, $derivedKeys->getSalt());
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testTrySetInvalidKey(): void
     {
         $this->expectException(SymmetricKeyException::class);

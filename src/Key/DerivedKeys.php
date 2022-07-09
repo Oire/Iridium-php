@@ -6,7 +6,7 @@ use Oire\Iridium\Crypt;
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
  * Derive encryption and authentication keys for encryption.
- * Copyright © 2021, Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  * Copyright © 2016 Scott Arciszewski, Paragon Initiative Enterprises, https://paragonie.com.
  * Portions copyright © 2016 Taylor Hornby, Defuse Security Research and Development, https://defuse.ca.
  *
@@ -36,7 +36,7 @@ final class DerivedKeys
     private string $authenticationKey;
 
     /**
-     * This value objects holds the keys derived from the provided symmetric key.
+     * This value objects holds the keys derived from the provided shared key.
      * Class constructor.
      * @param string $salt              The salt for deriving the keys
      * @param string $encryptionKey     the derived encryption key

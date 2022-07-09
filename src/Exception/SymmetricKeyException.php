@@ -26,6 +26,11 @@ namespace Oire\Iridium\Exception;
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
+
+/**
+ * @deprecated 1.2 Use Oire\Iridium\Exception\SharedKeyException instead
+ * @psalm-suppress UnusedClass
+ */
 final class SymmetricKeyException extends IridiumException
 {
     /** @psalm-suppress PossiblyUnusedReturnValue */

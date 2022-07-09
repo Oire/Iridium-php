@@ -2,6 +2,8 @@
 
 * [#52](https://github.com/Oire/Iridium-php/pull/52):
   Add release notes config; Add PHP CodeSniffer to Github Actions CI.
+* [#53](https://github.com/Oire/Iridium-php/pull/53):
+  Deprecated Symmetric Key in favor of Shared Key for simpler naming.
 
 # Version 1.1
 

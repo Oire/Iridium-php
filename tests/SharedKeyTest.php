@@ -1,10 +1,14 @@
 <?php
-declare(strict_types=1);
-namespace Oire\Iridium\Exception;
+namespace Oire\Iridium\Tests;
+
+use Oire\Iridium\Crypt;
+use Oire\Iridium\Exception\SharedKeyException;
+use Oire\Iridium\Key\DerivedKeys;
+use Oire\Iridium\Key\SharedKey;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Wraps Bcrypt-SHA2 in Authenticated Encryption.
  * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  * Copyright © 2016 Scott Arciszewski, Paragon Initiative Enterprises, https://paragonie.com.
  * Portions copyright © 2016 Taylor Hornby, Defuse Security Research and Development, https://defuse.ca.
@@ -27,11 +31,42 @@ namespace Oire\Iridium\Exception;
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
-class CryptException extends IridiumException
+class SharedKeyTest extends TestCase
 {
-    /** @psalm-suppress PossiblyUnusedReturnValue */
-    final public static function hmacFailed(): self
+    // Oire\Iridium\Base64::encode(hex2bin('000102030405060708090a0b0c0d0e0f'));
+    private const TEST_KEY = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
+
+    public function testSetKnownKey(): void
     {
-        return new self('Failed to compute HMAC.');
+        $sharedKey = new SharedKey(self::TEST_KEY);
+
+        self::assertSame(self::TEST_KEY, $sharedKey->getKey());
+        self::assertSame(SharedKey::KEY_SIZE, mb_strlen($sharedKey->getRawKey(), Crypt::STRING_ENCODING_8BIT));
+    }
+
+    public function testDeriveKeys(): void
+    {
+        $sharedKey = new SharedKey();
+        $derivedKeys = $sharedKey->deriveKeys();
+
+        self::assertInstanceOf(DerivedKeys::class, $derivedKeys);
+
+        $key = $sharedKey->getKey();
+        $salt = $derivedKeys->getSalt();
+
+        self::assertTrue($derivedKeys->areValid());
+        self::assertSame(DerivedKeys::SALT_SIZE, mb_strlen($salt, Crypt::STRING_ENCODING_8BIT));
+
+        $derivedKeys = (new SharedKey($key))->deriveKeys($salt);
+
+        self::assertTrue($derivedKeys->areValid());
+        self::assertSame($salt, $derivedKeys->getSalt());
+    }
+
+    public function testTrySetInvalidKey(): void
+    {
+        $this->expectException(SharedKeyException::class);
+
+        new SharedKey('abc');
     }
 }

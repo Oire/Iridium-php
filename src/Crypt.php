@@ -6,14 +6,14 @@ use Oire\Iridium\Exception\Base64Exception;
 use Oire\Iridium\Exception\CryptException;
 use Oire\Iridium\Exception\DecryptionException;
 use Oire\Iridium\Exception\EncryptionException;
-use Oire\Iridium\Exception\SymmetricKeyException;
+use Oire\Iridium\Exception\SharedKeyException;
 use Oire\Iridium\Key\DerivedKeys;
-use Oire\Iridium\Key\SymmetricKey;
+use Oire\Iridium\Key\SharedKey;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
  * Performs Authenticated Encryption.
- * Copyright © 2021, Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  * Copyright © 2016 Scott Arciszewski, Paragon Initiative Enterprises, https://paragonie.com.
  * Portions copyright © 2016 Taylor Hornby, Defuse Security Research and Development, https://defuse.ca.
  *
@@ -47,11 +47,11 @@ final class Crypt
     /**
      * Encrypt data with a given key.
      * @param  string              $plainText The data to be encrypted
-     * @param  SymmetricKey        $key       The Iridium key used for encryption
+     * @param  SharedKey           $key       The Iridium key used for encryption
      * @throws EncryptionException
      * @return string              Returns the encrypted data
      */
-    public static function encrypt(string $plainText, SymmetricKey $key): string
+    public static function encrypt(string $plainText, SharedKey $key): string
     {
         if (!function_exists('openssl_encrypt')) {
             throw new EncryptionException('OpenSSL encryption not available.');
@@ -63,7 +63,7 @@ final class Crypt
 
         try {
             $derivedKeys = $key->deriveKeys();
-        } catch (SymmetricKeyException $e) {
+        } catch (SharedKeyException $e) {
             throw new EncryptionException(sprintf('Unable to derive keys: %s', $e->getMessage()), $e);
         }
 
@@ -99,11 +99,11 @@ final class Crypt
     /**
      * Decrypt data with a given key.
      * @param  string              $cipherText The encrypted data, as a string
-     * @param  SymmetricKey        $key        The Iridium key the data was encrypted with
+     * @param  SharedKey           $key        The Iridium key the data was encrypted with
      * @throws DecryptionException
      * @return string              the decrypted plain text
      */
-    public static function decrypt(string $cipherText, SymmetricKey $key): string
+    public static function decrypt(string $cipherText, SharedKey $key): string
     {
         if (!function_exists('openssl_decrypt')) {
             throw new DecryptionException('OpenSSL decryption not available.');
@@ -132,7 +132,7 @@ final class Crypt
 
         try {
             $derivedKeys = $key->deriveKeys($salt);
-        } catch (SymmetricKeyException $e) {
+        } catch (SharedKeyException $e) {
             throw new DecryptionException(sprintf('Unable to derive keys: %s.', $e->getMessage()), $e);
         }
 
@@ -196,17 +196,17 @@ final class Crypt
 
     /**
      * Change encryption key (for instance, if the old one is compromised).
-     * @param  string                $cipherText The encrypted data
-     * @param  SymmetricKey          $oldKey     The key the data was encrypted before
-     * @param  SymmetricKey          $newKey     The key for re-encrypting the data
-     * @throws SymmetricKeyException
-     * @return string                Returns the re-encrypted data
+     * @param  string             $cipherText The encrypted data
+     * @param  SharedKey          $oldKey     The key the data was encrypted before
+     * @param  SharedKey          $newKey     The key for re-encrypting the data
+     * @throws SharedKeyException
+     * @return string             Returns the re-encrypted data
      */
-    public static function swapKey(string $cipherText, SymmetricKey $oldKey, SymmetricKey $newKey): string
+    public static function swapKey(string $cipherText, SharedKey $oldKey, SharedKey $newKey): string
     {
         try {
             $plainText = self::decrypt($cipherText, $oldKey);
-        } catch (SymmetricKeyException $e) {
+        } catch (SharedKeyException $e) {
             throw new CryptException(sprintf('Invalid old key: %s', $e->getMessage()), $e);
         } catch (DecryptionException $e) {
             throw new CryptException(sprintf('Decryption failed: %s.', $e->getMessage()), $e);
@@ -214,7 +214,7 @@ final class Crypt
 
         try {
             return self::encrypt($plainText, $newKey);
-        } catch (SymmetricKeyException $e) {
+        } catch (SharedKeyException $e) {
             throw new CryptException(sprintf('Invalid new key: %s', $e->getMessage()), $e);
         } catch (EncryptionException $e) {
             throw new CryptException(sprintf('Encryption failed: %s.', $e->getMessage()), $e);

@@ -5,13 +5,13 @@ namespace Oire\Iridium;
 use Oire\Iridium\Exception\DecryptionException;
 use Oire\Iridium\Exception\EncryptionException;
 use Oire\Iridium\Exception\PasswordException;
-use Oire\Iridium\Exception\SymmetricKeyException;
-use Oire\Iridium\Key\SymmetricKey;
+use Oire\Iridium\Exception\SharedKeyException;
+use Oire\Iridium\Key\SharedKey;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
  * Performs Authenticated Encryption.
- * Copyright © 2021, Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  * Copyright © 2016 Scott Arciszewski, Paragon Initiative Enterprises, https://paragonie.com.
  * Portions copyright © 2016 Taylor Hornby, Defuse Security Research and Development, https://defuse.ca.
  *
@@ -39,11 +39,11 @@ final class Password
      * Hash password, encrypt-then-MAC the hash
      *
      * @param  string            $password The password to hash
-     * @param  SymmetricKey      $key      The Iridium key for encryption
+     * @param  SharedKey         $key      The Iridium key for encryption
      * @throws PasswordException
      * @return string            Returns encrypted result
      */
-    public static function lock(string $password, SymmetricKey $key): string
+    public static function lock(string $password, SharedKey $key): string
     {
         if (!$password) {
             throw new PasswordException('Password must not be empty.');
@@ -58,7 +58,7 @@ final class Password
 
         try {
             return Crypt::encrypt($hash, $key);
-        } catch (SymmetricKeyException $e) {
+        } catch (SharedKeyException $e) {
             throw new PasswordException(sprintf('Invalid key given: %s', $e->getMessage()), $e);
         } catch (EncryptionException $e) {
             throw new PasswordException(sprintf('Encryption failed: %s.', $e->getMessage()), $e);
@@ -70,11 +70,11 @@ final class Password
      *
      * @param  string            $password   The password to check
      * @param  string            $cipherText The hash to match against
-     * @param  SymmetricKey      $key        The Iridium key used for encryption`
+     * @param  SharedKey         $key        The Iridium key used for encryption
      * @throws PasswordException
      * @return bool              Returns true if the password is valid, false otherwise
      */
-    public static function check(string $password, string $cipherText, SymmetricKey $key): bool
+    public static function check(string $password, string $cipherText, SharedKey $key): bool
     {
         if (!$password) {
             throw new PasswordException('Password must not be empty.');
@@ -82,7 +82,7 @@ final class Password
 
         try {
             $hash = Crypt::decrypt($cipherText, $key);
-        } catch (SymmetricKeyException $e) {
+        } catch (SharedKeyException $e) {
             throw new PasswordException(sprintf('Invalid key given: %s', $e->getMessage()), $e);
         } catch (DecryptionException $e) {
             throw new PasswordException(sprintf('Decryption failed: %s.', $e->getMessage()), $e);

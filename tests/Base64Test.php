@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Copyright © 2021, Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  *  Portions copyright © 2016 Paragon Initiative Enterprises.
  *  Portions copyright © 2014 Steve "Sc00bz" Thomas (steve at tobtu dot com)
  *
