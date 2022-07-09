@@ -93,17 +93,18 @@ The Base64 class has the following methods:
 
 The Crypt module is used to encrypt and decrypt data.  
 **Note**! Do not use this for managing passwords! Passwords must not be encrypted, they must be *hashed* instead. To manage passwords, use the Password module (see below).  
-Currently the Crypt module supports only symmetric-key encryption, i.e., encryption and decryption is performed with one shared key.
+Currently the Crypt module supports only shared key encryption, i.e., encryption and decryption is performed with one single key.
 
-### Symmetric Key
+### Shared Key
 
+**Note**! the `SymmetricKey` class is deprecated since version 1.2 and will be removed in version 2.0. It holds the same object but was renamed to `SharedKey` for simplicity.
 This objects holds a key used to encrypt and decrypt data with the Crypt module. First you need to create a key and save it somewhere (i.e., in a .env file):
 
 ```php
-use Oire\Iridium\Key\SymmetricKey;
+use Oire\Iridium\Key\SharedKey;
 
-$symmetricKey = new SymmetricKey();
-$key = $symmetricKey->getKey();
+$sharedKey = new SharedKey();
+$key = $sharedKey->getKey();
 // Save the key instead
 echo $key . PHP_EOL;
 ```
@@ -114,11 +115,11 @@ This will output a readable and storable string, something similar to this:
 AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8
 ```
 
-#### Symmetric Key Methods
+#### SharedKey Methods
 
 Generally, you will only need the `getKey()` method for storing the key in a safe place. You can also benefit from using the `__toString()` method and treat the key object as a string. However, let’s describe all the methods for the sake of completeness:
 
-* `__construct(string|null $key = null)` — Class constructor. If a key is provided, it will be applied to create a new SymmetricKey instance. If not, a random key will be generated instead.
+* `__construct(string|null $key = null)` — Class constructor. If a key is provided, it will be applied to create a new SharedKey instance. If not, a random key will be generated instead.
 * `getRawKey(): string` — Returns the key in raw binary form. Needed mostly for internal use.
 * `getKey(): string` — Returns the key in readable and storable form. Use this to retrieve a newly generated random key.
 * `deriveKeys(string|null $salt = null): DerivedKeys` — Uses [hash key derivation function](https://en.wikipedia.org/wiki/HKDF) to derive encryption and authentication keys and returns a `DerivedKeys` object, see below. Use this only if you really know what you are doing. It is used internally by the Crypt module. If the salt is provided, derives the keys based on that salt (used for decryption). In 99,(9)% of cases you don’t need to use this method directly.
@@ -126,9 +127,9 @@ Generally, you will only need the `getKey()` method for storing the key in a saf
 
 ### Derived Keys
 
-The DerivedKeys object holds the keys derived by the `deriveKeys()` method of the symmetric key. Again, in 99,(9)% of cases you don’t want to use it, but let’s enumerate its methods.
+The DerivedKeys object holds the keys derived by the `deriveKeys()` method of the shared key. Again, in 99,(9)% of cases you don’t want to use it, but let’s enumerate its methods.
 
-* `__construct(string $salt, string $encryptionKey, string $authenticationKey)` — Class constructor. Is instantiated by the `deriveKeys()` method of the `SymmetricKey` object.
+* `__construct(string $salt, string $encryptionKey, string $authenticationKey)` — Class constructor. Is instantiated by the `deriveKeys()` method of the `SharedKey` object.
 * `getSalt(): string` — Gets the encryption salt.
 * `getEncryptionKey(): string` — Gets the derived encryption key.
 * `getAuthenticationKey(): string` — Gets the derived authentication key.
@@ -136,34 +137,34 @@ The DerivedKeys object holds the keys derived by the `deriveKeys()` method of th
 
 ### Crypt Usage Examples
 
-If you created a Symmetric key as shown above, you can encrypt your data with this key:
+If you created a shared key as shown above, you can encrypt your data with this key:
 
 ```php
 use Oire\Iridium\Crypt;
-use Oire\Iridium\Key\SymmetricKey;
+use Oire\Iridium\Key\SharedKey;
 
 $data = 'Mischief managed!';
-$symmetricKey = new SymmetricKey($key);
-$encrypted = Crypt::encrypt($data, $symmetricKey);
+$sharedKey = new SharedKey($key);
+$encrypted = Crypt::encrypt($data, $sharedKey);
 ```
 
 That's it, you may store your encrypted data in a database or perform other actions with them.  
 To decrypt the data with the same key, use the following:
 
 ```php
-$decrypted = Crypt::decrypt($encrypted, $symmetricKey);
+$decrypted = Crypt::decrypt($encrypted, $sharedKey);
 ```
 
 ### Exceptions
-Crypt throws `EncryptionException`, `DecryptionException` and sometimes a more general `CryptException`. If something is wrong with the key, a `SymmetricKeyException` is thrown.
+Crypt throws `EncryptionException`, `DecryptionException` and sometimes a more general `CryptException`. If something is wrong with the key, a `SharedKeyException` is thrown.
 
 ### Methods
 
 The Crypt class has the following methods:
 
-* `static encrypt(string $data, SymmetricKey $key): string` — Encrypts given data with a given key. Returns the encrypted data in readable and storable form.
-* `static Decrypt(string $encryptedData, SymmetricKey $key): string` — Decrypts previously encrypted data with the same key they were encrypted with and returns the original string.
-* `static swapKey(string $data, SymmetricKey $oldKey, SymmetricKey $newKey): string` — Reencrypts encrypted data with a different key and returns the newly encrypted data.
+* `static encrypt(string $data, SharedKey $key): string` — Encrypts given data with a given key. Returns the encrypted data in readable and storable form.
+* `static Decrypt(string $encryptedData, SharedKey $key): string` — Decrypts previously encrypted data with the same key they were encrypted with and returns the original string.
+* `static swapKey(string $data, SharedKey $oldKey, SharedKey $newKey): string` — Reencrypts encrypted data with a different key and returns the newly encrypted data.
 
 ## 🔒 Password
 
@@ -175,14 +176,14 @@ To lock, i.e., hash a password, use the following:
 
 ```php
 use Oire\Iridium\Exception\PasswordException;
-use Oire\Iridium\Key\SymmetricKey;
+use Oire\Iridium\Key\SharedKey;
 use Oire\Iridium\Password;
 
 // You should have $key somewhere in an environment variable
-$symmetricKey = new SymmetricKey($key);
+$sharedKey = new SharedKey($key);
 
 try {
-    $storeMe = Password::lock($_POST['password'], $symmetricKey);
+    $storeMe = Password::lock($_POST['password'], $sharedKey);
 } catch (PasswordException $e) {
     // Handle errors
 }
@@ -193,7 +194,7 @@ To check whether a provided password is valid, use the following:
 
 ```php
 try {
-    $isPasswordValid = Password::check($_POST['password'], $hashFromDatabase, $symmetricKey);
+    $isPasswordValid = Password::check($_POST['password'], $hashFromDatabase, $sharedKey);
 } catch (PasswordException $e) {
     // Handle errors. Something went wrong: most often it's a wrong or corrupted key
 }
@@ -212,8 +213,8 @@ Remember that you cannot "decrypt" a password and obviously must not store unhas
 
 The Password class has the following methods:
 
-* `static Lock(string $password, SymmetricKey $key): string` — Locks, i.e., hashes a password and encrypts it with a given key. Returns the encrypted hash in readable and storable format. A hashed password cannot be restored, so it is safe to be stored in a database.
-* `static Check(string $password, string $encryptedHash, SymmetricKey $key): bool` — Verifies whether a given password matches the provided hash. Returns `true` on success and `false` on failure.
+* `static Lock(string $password, SharedKey $key): string` — Locks, i.e., hashes a password and encrypts it with a given key. Returns the encrypted hash in readable and storable format. A hashed password cannot be restored, so it is safe to be stored in a database.
+* `static Check(string $password, string $encryptedHash, SharedKey $key): bool` — Verifies whether a given password matches the provided hash. Returns `true` on success and `false` on failure.
 
 ## 🍪 Osst, Simple Yet Secure Tokens Suitable for Authentication Cookies and Password Recovery
 
@@ -340,13 +341,13 @@ You may set expiration time in three different ways, as you like:
 
 You may store some sensitive data in the additional information for the token such as old and new e-mail address and similar things.  
 **Note**! Do **not** store plain-text passwords in this property, it can be decrypted! Passwords must not be decryptable, they must be *hashed* instead. If you need to handle passwords, use the Password class, it is suitable for proper password hashing (see above). You may store password hashes in this property, though.  
-If your additional info contains sensitive data, you can encrypt it. To do this, you first need to have an Iridium symmetric key (see above):
+If your additional info contains sensitive data, you can encrypt it. To do this, you first need to have an Iridium key (see above):
 
 ```php
-use Oire\Iridium\Key\SymmetricKey;
+use Oire\Iridium\Key\SharedKey;
 use Oire\Iridium\Osst;
 
-$key = new SymmetricKey();
+$key = new SharedKey();
 // Store the key somewhere safe, i.e., in an environment variable. You can safely cast it to string for that (see above)
 $additionalInfo = '{"oldEmail": "john@example.com", "newEmail": "john.doe@example.com"}';
 $osst = (new Osst($dbConnection))
@@ -371,7 +372,7 @@ Osst throws two types of exceptions:
 
 Below all of the Osst methods are outlined.
 
-* `__construct(PDO $dbConnection, string|null $token, Oire\Iridium\Key\SymmetricKey|null $additionalInfoDecryptionKey)` — Instantiate a new Osst object. Provide a PDO instance as the first parameter, the user-provided token as the second one, and the Iridium key for decrypting additional info as the third one. **Note**! Provide the token only if you received it from the user. If you want to create a fresh token, the second and third parameters must not be set.
+* `__construct(PDO $dbConnection, string|null $token, Oire\Iridium\Key\SharedKey|null $additionalInfoDecryptionKey)` — Instantiate a new Osst object. Provide a PDO instance as the first parameter, the user-provided token as the second one, and the Iridium key for decrypting additional info as the third one. **Note**! Provide the token only if you received it from the user. If you want to create a fresh token, the second and third parameters must not be set.
 * `getDbConnection(): PDO` — Get the database connection for the current Osst instance as a PDO object.
 * `getToken(): string` — Get the token for the current Osst instance as a string. Throws `OsstException` if the token was not created or set before.
 * `getUserId(): int` — Get the ID of the user the token belongs to, as an integer.
@@ -388,7 +389,7 @@ Below all of the Osst methods are outlined.
 * `getTokenType(): int|null` — Get the type for the current token. Returns integer if the token type was set before, or null if the token has no type.
 * `setTokenType(int|null $tokenType): self` — Set the type for the current token, as integer or null. Returns `$this` for chainability.
 * `getAdditionalInfo(): string|null` — Get additional info for the token. Returns string or null, if additional info was not set before.
-* `setAdditionalInfo(string|null $additionalInfo, Oire\Iridium\Key\SymmetricKey|null $encryptionKey = null): self` — Set additional info for the current token. If the `$encryptionKey` parameter is not empty, tries to encrypt the additional information using the Crypt class. Returns `$this` for chainability.
+* `setAdditionalInfo(string|null $additionalInfo, Oire\Iridium\Key\SharedKey|null $encryptionKey = null): self` — Set additional info for the current token. If the `$encryptionKey` parameter is not empty, tries to encrypt the additional information using the Crypt class. Returns `$this` for chainability.
 * `persist(): self` — Store the token into the database. Returns `$this` for chainability.
 * `revokeToken(bool $deleteToken = false): void` — Revoke. i.e., invalidate the current token after it is used. If the `$deleteToken` parameter is set to `true`, the token will be deleted from the database, and `getToken()` will return `null`. If it is set to `false` (default), the expiration time for the token will be updated and set to a value in the past. The method returns no value.
 * `static clearExpiredTokens(PDO $dbConnection): int` — Delete all expired tokens from the database. As it is a static method, it receives the database connection as a PDO object. Returns the number of deleted tokens, as integer.
@@ -415,5 +416,5 @@ When your pull request is submitted, make sure all checks passed on CI.
 
 ## License
 
-Copyright © 2021-2022, Andre Polykanine also known as Menelion Elensúlë, [The Magical Kingdom of Oirë](https://github.com/Oire/).  
+Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, [The Magical Kingdom of Oirë](https://github.com/Oire/).  
 This software is licensed under an MIT license.

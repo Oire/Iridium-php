@@ -4,13 +4,13 @@ namespace Oire\Iridium\Tests;
 
 use Oire\Iridium\Crypt;
 use Oire\Iridium\Exception\PasswordException;
-use Oire\Iridium\Key\SymmetricKey;
+use Oire\Iridium\Key\SharedKey;
 use Oire\Iridium\Password;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Copyright © 2021, Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  * Copyright © 2016 Scott Arciszewski, Paragon Initiative Enterprises, https://paragonie.com.
  * Portions copyright © 2016 Taylor Hornby, Defuse Security Research and Development, https://defuse.ca.
  *
@@ -45,7 +45,7 @@ class PasswordTest extends TestCase
 
     public function testLockWithKnownKey(): void
     {
-        $key = new SymmetricKey(self::TEST_KEY);
+        $key = new SharedKey(self::TEST_KEY);
         $locked = Password::lock(self::CORRECT_PASSWORD, $key);
 
         self::assertTrue(Password::check(self::CORRECT_PASSWORD, $locked, $key));
@@ -54,7 +54,7 @@ class PasswordTest extends TestCase
 
     public function testLockWithRandomKey(): void
     {
-        $key = new SymmetricKey();
+        $key = new SharedKey();
         $locked = Password::lock(self::CORRECT_PASSWORD, $key);
 
         self::assertTrue(Password::check(self::CORRECT_PASSWORD, $locked, $key));
@@ -63,8 +63,8 @@ class PasswordTest extends TestCase
 
     public function testSwapKeys(): void
     {
-        $oldKey = new SymmetricKey(self::TEST_KEY);
-        $newKey = new SymmetricKey(self::NEW_KEY);
+        $oldKey = new SharedKey(self::TEST_KEY);
+        $newKey = new SharedKey(self::NEW_KEY);
         $locked = Password::lock(self::CORRECT_PASSWORD, $oldKey);
 
         self::assertTrue(Password::check(self::CORRECT_PASSWORD, $locked, $oldKey));
@@ -76,8 +76,8 @@ class PasswordTest extends TestCase
 
     public function testTryDecryptWithWrongKey(): void
     {
-        $key = new SymmetricKey();
-        $wrongKey = new SymmetricKey();
+        $key = new SharedKey();
+        $wrongKey = new SharedKey();
         $locked = Password::lock(self::CORRECT_PASSWORD, $key);
 
         $this->expectException(PasswordException::class);

@@ -4,9 +4,9 @@ namespace Oire\Iridium\Exception;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
- *  Portions copyright © 2016 Paragon Initiative Enterprises.
- *  Portions copyright © 2014 Steve "Sc00bz" Thomas (steve at tobtu dot com)
+ * Copyright © 2021-2022, Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2016 Scott Arciszewski, Paragon Initiative Enterprises, https://paragonie.com.
+ * Portions copyright © 2016 Taylor Hornby, Defuse Security Research and Development, https://defuse.ca.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,17 @@ namespace Oire\Iridium\Exception;
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
-
-class Base64Exception extends IridiumException
+final class SharedKeyException extends IridiumException
 {
+    /** @psalm-suppress PossiblyUnusedReturnValue */
+    public static function authenticationKeyFailed(): self
+    {
+        return new self('Failed to derive authentication key.');
+    }
+
+    /** @psalm-suppress PossiblyUnusedReturnValue */
+    public static function encryptionKeyFailed(): self
+    {
+        return new self('Failed to derive encryption key.');
+    }
 }

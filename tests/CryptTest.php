@@ -4,12 +4,12 @@ namespace Oire\Iridium\Tests;
 
 use Oire\Iridium\Crypt;
 use Oire\Iridium\Exception\DecryptionException;
-use Oire\Iridium\Key\SymmetricKey;
+use Oire\Iridium\Key\SharedKey;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Copyright © 2021, Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  * Copyright © 2016 Scott Arciszewski, Paragon Initiative Enterprises, https://paragonie.com.
  * Portions copyright © 2016 Taylor Hornby, Defuse Security Research and Development, https://defuse.ca.
  *
@@ -42,7 +42,7 @@ class CryptTest extends TestCase
 
     public function testEncryptAndDecryptWithKnownKey(): void
     {
-        $key = new SymmetricKey(self::TEST_KEY);
+        $key = new SharedKey(self::TEST_KEY);
         $encrypted = Crypt::encrypt(self::DECRYPTABLE_DATA, $key);
 
         self::assertSame(self::DECRYPTABLE_DATA, Crypt::decrypt($encrypted, $key));
@@ -50,7 +50,7 @@ class CryptTest extends TestCase
 
     public function testEncryptAndDecryptWithRandomKey(): void
     {
-        $key = new SymmetricKey();
+        $key = new SharedKey();
         $encrypted = Crypt::encrypt(self::DECRYPTABLE_DATA, $key);
 
         self::assertSame(self::DECRYPTABLE_DATA, Crypt::decrypt($encrypted, $key));
@@ -58,7 +58,7 @@ class CryptTest extends TestCase
 
     public function testTryDecryptingCorruptData(): void
     {
-        $key = new SymmetricKey();
+        $key = new SharedKey();
 
         $this->expectException(DecryptionException::class);
 
@@ -67,8 +67,8 @@ class CryptTest extends TestCase
 
     public function testSwapKnownKeys(): void
     {
-        $oldKey = new SymmetricKey(self::TEST_KEY);
-        $newKey = new SymmetricKey(self::NEW_KEY);
+        $oldKey = new SharedKey(self::TEST_KEY);
+        $newKey = new SharedKey(self::NEW_KEY);
         $encrypted = Crypt::encrypt(self::DECRYPTABLE_DATA, $oldKey);
 
         self::assertSame(self::DECRYPTABLE_DATA, Crypt::decrypt($encrypted, $oldKey));
@@ -80,8 +80,8 @@ class CryptTest extends TestCase
 
     public function testSwapRandomKeys(): void
     {
-        $oldKey = new SymmetricKey();
-        $newKey = new SymmetricKey();
+        $oldKey = new SharedKey();
+        $newKey = new SharedKey();
         $encrypted = Crypt::encrypt(self::DECRYPTABLE_DATA, $oldKey);
 
         self::assertSame(self::DECRYPTABLE_DATA, Crypt::decrypt($encrypted, $oldKey));

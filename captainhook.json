@@ -9,7 +9,7 @@
                 "action": "php vendor/bin/php-cs-fixer fix"
             },
             {
-                "action": "php vendor/bin/phpcs"
+                "action": "php vendor/bin/phpcs src tests"
             },
             {
                 "action": "php vendor/bin/phpunit"

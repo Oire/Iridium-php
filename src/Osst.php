@@ -8,7 +8,7 @@ use Oire\Iridium\Exception\Base64Exception;
 use Oire\Iridium\Exception\CryptException;
 use Oire\Iridium\Exception\InvalidTokenException;
 use Oire\Iridium\Exception\OsstException;
-use Oire\Iridium\Key\SymmetricKey;
+use Oire\Iridium\Key\SharedKey;
 use PDO;
 use PDOException;
 use Throwable;
@@ -16,7 +16,7 @@ use Throwable;
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
  * Implements the split token authentication model proposed by Paragon Initiatives.
- * Copyright © 2021 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  * Idea Copyright © 2017 Paragon Initiatives.
  * @see https://paragonie.com/blog/2017/02/split-tokens-token-based-authentication-protocols-without-side-channels
  *
@@ -58,14 +58,14 @@ final class Osst
 
     /**
      * Instantiate a new Osst object.
-     * @param PDO               $dbConnection      Connection to your database
-     * @param string|null       $token             A user-provided token
-     * @param SymmetricKey|null $additionalInfoKey The Iridium key to decrypt additional info for the token
+     * @param PDO            $dbConnection      Connection to your database
+     * @param string|null    $token             A user-provided token
+     * @param SharedKey|null $additionalInfoKey The Iridium key to decrypt additional info for the token
      */
     public function __construct(
         PDO $dbConnection,
         ?string $token = null,
-        ?SymmetricKey $additionalInfoKey = null
+        ?SharedKey $additionalInfoKey = null
     ) {
         $this->dbConnection = $dbConnection;
 
@@ -121,10 +121,10 @@ final class Osst
     /**
      * Set and validate a user-provided token.
      * @param  string                $token             The token provided by the user
-     * @param  SymmetricKey|null     $additionalInfoKey If not empty, the encrypted additional info will be decrypted
+     * @param  SharedKey|null        $additionalInfoKey If not empty, the encrypted additional info will be decrypted
      * @throws InvalidTokenException
      */
-    private function setToken(string $token, ?SymmetricKey $additionalInfoKey = null): void
+    private function setToken(string $token, ?SharedKey $additionalInfoKey = null): void
     {
         try {
             $rawToken = Base64::decode($token);
@@ -425,11 +425,11 @@ final class Osst
 
     /**
      * Set the additional info for the token.
-     * @param  string|null       $additionalInfo Any additional info you want to convey along with the token, as string
-     * @param  SymmetricKey|null $encryptionKey  If not empty, the data will be encrypted
+     * @param  string|null    $additionalInfo Any additional info you want to convey along with the token, as string
+     * @param  SharedKey|null $encryptionKey  If not empty, the data will be encrypted
      * @return $this
      */
-    public function setAdditionalInfo(?string $additionalInfo, ?SymmetricKey $encryptionKey = null): self
+    public function setAdditionalInfo(?string $additionalInfo, ?SharedKey $encryptionKey = null): self
     {
         if ($additionalInfo) {
             if ($encryptionKey) {
