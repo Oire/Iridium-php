@@ -53,8 +53,7 @@ class OsstTest extends TestCase
             );
         SQL;
 
-    /** @var PDO */
-    private static $db;
+    private static PDO $db;
 
     /** @psalm-suppress DeprecatedClass */
     public static function setUpBeforeClass(): void

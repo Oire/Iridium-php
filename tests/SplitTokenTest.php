@@ -53,8 +53,7 @@ class SplitTokenTest extends TestCase
             );
         SQL;
 
-    /** @var PDO */
-    private static $db;
+    private static PDO $db;
 
     public static function setUpBeforeClass(): void
     {
