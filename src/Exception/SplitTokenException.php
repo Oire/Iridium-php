@@ -24,12 +24,7 @@ namespace Oire\Iridium\Exception;
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
-
-/**
- * @deprecated 1.2 Use Oire\Iridium\Exception\SplitTokenException instead
- * @psalm-suppress UnusedClass
- */
-class OsstException extends IridiumException
+class SplitTokenException extends IridiumException
 {
     /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function invalidUserId(int $userId = 0): self

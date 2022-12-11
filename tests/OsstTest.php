@@ -56,17 +56,20 @@ class OsstTest extends TestCase
     /** @var PDO */
     private static $db;
 
+    /** @psalm-suppress DeprecatedClass */
     public static function setUpBeforeClass(): void
     {
         self::$db = new Pdo('sqlite::memory:');
         self::$db->query(sprintf(self::CREATE_TABLE_SQL, Osst::TABLE_NAME));
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public static function tearDownAfterClass(): void
     {
         self::$db = null;
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testSetKnownToken(): void
     {
         $expirationTime = (new DateTimeImmutable())->modify(Osst::DEFAULT_EXPIRATION_DATE_OFFSET)->getTimestamp();
@@ -99,6 +102,7 @@ class OsstTest extends TestCase
         self::assertSame(self::TEST_ADDITIONAL_INFO, $osst->getAdditionalInfo());
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testCreateTokenAndSetExpirationTime(): void
     {
         $startOsst = new Osst(self::$db);
@@ -120,6 +124,7 @@ class OsstTest extends TestCase
         self::assertSame(self::TEST_ADDITIONAL_INFO, $osst->getAdditionalInfo());
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testCreateTokenAndSetExpirationOffset(): void
     {
         $startOsst = new Osst(self::$db);
@@ -141,6 +146,7 @@ class OsstTest extends TestCase
         self::assertNull($osst->getAdditionalInfo());
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testCreateTokenAndSetExpirationDate(): void
     {
         $startOsst = new Osst(self::$db);
@@ -166,6 +172,7 @@ class OsstTest extends TestCase
         self::assertNull($osst->getAdditionalInfo());
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testCreateEternalToken(): void
     {
         $startOsst = new Osst(self::$db);
@@ -186,6 +193,7 @@ class OsstTest extends TestCase
         self::assertSame(self::TEST_ADDITIONAL_INFO, $osst->getAdditionalInfo());
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testRevokeToken(): void
     {
         $startOsst = new Osst(self::$db);
@@ -206,6 +214,7 @@ class OsstTest extends TestCase
         self::assertTrue($osst->isExpired());
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testRevokeEternalToken(): void
     {
         $startOsst = new Osst(self::$db);
@@ -223,6 +232,7 @@ class OsstTest extends TestCase
         self::assertFalse($osst->isEternal());
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testClearExpiredTokens(): void
     {
         self::$db->query(sprintf('DELETE FROM %s', Osst::TABLE_NAME));
@@ -237,6 +247,7 @@ class OsstTest extends TestCase
         self::assertSame(2, Osst::clearExpiredTokens(self::$db));
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testTrySetExpirationTimeInPast(): void
     {
         self::expectException(OsstException::class);
@@ -245,6 +256,7 @@ class OsstTest extends TestCase
         (new Osst(self::$db))->setUserId(123)->setExpirationTime(time() - 3600)->persist();
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testTryPersistWithInvalidUserId(): void
     {
         self::expectException(OsstException::class);
@@ -253,6 +265,7 @@ class OsstTest extends TestCase
         (new Osst(self::$db))->persist();
     }
 
+    /** @psalm-suppress DeprecatedClass */
     public function testInvalidTokenLength(): void
     {
         self::expectException(InvalidTokenException::class);
