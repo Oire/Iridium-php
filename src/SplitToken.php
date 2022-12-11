@@ -7,7 +7,7 @@ use DateTimeZone;
 use Oire\Iridium\Exception\Base64Exception;
 use Oire\Iridium\Exception\CryptException;
 use Oire\Iridium\Exception\InvalidTokenException;
-use Oire\Iridium\Exception\OsstException;
+use Oire\Iridium\Exception\SplitTokenException;
 use Oire\Iridium\Key\SharedKey;
 use PDO;
 use PDOException;
@@ -38,12 +38,7 @@ use Throwable;
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
-
-/**
- * @deprecated 1.2 Use Oire\Iridium\SplitToken instead
- *@psalm-suppress UnusedClass
- */
-final class Osst
+final class SplitToken
 {
     public const TABLE_NAME = 'iridium_tokens';
     public const DEFAULT_EXPIRATION_DATE_FORMAT = 'Y-m-d H:i:s';
@@ -62,11 +57,10 @@ final class Osst
     private ?string $additionalInfo = null;
 
     /**
-     * Instantiate a new Osst object.
+     * Instantiate a new SplitToken object.
      * @param PDO            $dbConnection      Connection to your database
      * @param string|null    $token             A user-provided token
      * @param SharedKey|null $additionalInfoKey The Iridium key to decrypt additional info for the token
-     * @psalm-suppress DeprecatedClass
      */
     public function __construct(
         PDO $dbConnection,
@@ -112,14 +106,13 @@ final class Osst
 
     /**
      * Get the token.
-     * @throws OsstException If the token was not set or created beforehand
-     * @return string        Returns the token
-     * @psalm-suppress DeprecatedClass
+     * @throws SplitTokenException If the token was not set or created beforehand
+     * @return string              Returns the token
      */
     public function getToken(): string
     {
         if (!$this->token) {
-            throw OsstException::tokenNotSet();
+            throw SplitTokenException::tokenNotSet();
         }
 
         return $this->token;
@@ -130,7 +123,6 @@ final class Osst
      * @param  string                $token             The token provided by the user
      * @param  SharedKey|null        $additionalInfoKey If not empty, the encrypted additional info will be decrypted
      * @throws InvalidTokenException
-     * @psalm-suppress DeprecatedClass
      */
     private function setToken(string $token, ?SharedKey $additionalInfoKey = null): void
     {
@@ -198,7 +190,7 @@ final class Osst
         if (isset($result['user_id'])) {
             $this->userId = (int) $result['user_id'];
         } else {
-            throw OsstException::invalidUserId(0);
+            throw SplitTokenException::invalidUserId(0);
         }
 
         $this->expirationTime = isset($result['expiration_time']) ? (int) $result['expiration_time'] : 0;
@@ -209,7 +201,7 @@ final class Osst
                 try {
                     $this->additionalInfo = Crypt::decrypt($result['additional_info'], $additionalInfoKey);
                 } catch (CryptException $e) {
-                    throw OsstException::additionalInfoDecryptionError($e);
+                    throw SplitTokenException::additionalInfoDecryptionError($e);
                 }
             } else {
                 $this->additionalInfo = $result['additional_info'];
@@ -219,7 +211,6 @@ final class Osst
 
     /**
      * Get the ID of the user the token belongs to.
-     * @psalm-suppress DeprecatedClass
      */
     public function getUserId(): int
     {
@@ -228,19 +219,18 @@ final class Osst
 
     /**
      * Set the ID of the user the token belongs to.
-     * @param  int           $userId The ID of the user the token belongs to. Must be a positive integer.
-     * @throws OsstException
+     * @param  int                 $userId The ID of the user the token belongs to. Must be a positive integer.
+     * @throws SplitTokenException
      * @return $this
-     * @psalm-suppress DeprecatedClass
      */
     public function setUserId(int $userId): self
     {
         if ($this->userId) {
-            throw OsstException::propertyAlreadySet('User ID');
+            throw SplitTokenException::propertyAlreadySet('User ID');
         }
 
         if ($userId <= 0) {
-            throw OsstException::invalidUserId($userId);
+            throw SplitTokenException::invalidUserId($userId);
         }
 
         $this->userId = $userId;
@@ -250,7 +240,6 @@ final class Osst
 
     /**
      * Get the expiration time of the token as timestamp.
-     * @psalm-suppress DeprecatedClass
      */
     public function getExpirationTime(): int
     {
@@ -259,8 +248,8 @@ final class Osst
 
     /**
      * Check if the token is eternal, i.e., never expires.
-     * @throws OsstException If the expiration time is empty
-     * @return bool          True if the token never expires, false otherwise or if the token was revoked
+     * @throws SplitTokenException If the expiration time is empty
+     * @return bool                True if the token never expires, false otherwise or if the token was revoked
      */
     public function isEternal(): bool
     {
@@ -269,14 +258,13 @@ final class Osst
 
     /**
      * Get the expiration time of the token as a DateTime immutable object.
-     * @throws OsstException     If the token never expires
-     * @return DateTimeImmutable Returns the expiration time in the default time zone
-     * @psalm-suppress DeprecatedClass
+     * @throws SplitTokenException If the token never expires
+     * @return DateTimeImmutable   Returns the expiration time in the default time zone
      */
     public function getExpirationDate(): DateTimeImmutable
     {
         if ($this->isEternal()) {
-            throw OsstException::tokenNeverExpires();
+            throw SplitTokenException::tokenNeverExpires();
         }
 
         return (new DateTimeImmutable(sprintf('@%s', $this->expirationTime)))
@@ -287,14 +275,13 @@ final class Osst
      * Get the expiration time of the token in a given format.
      * @param string $format A valid date format. Defaults to `'Y-m-d H:i:s'`
      * @see https://www.php.net/manual/en/function.date.php
-     * @throws OsstException if the date formatting fails or the token never expires
-     * @return string        Returns the expiration time as date string in given format
-     * @psalm-suppress DeprecatedClass
+     * @throws SplitTokenException if the date formatting fails or the token never expires
+     * @return string              Returns the expiration time as date string in given format
      */
     public function getExpirationDateFormatted(string $format = self::DEFAULT_EXPIRATION_DATE_FORMAT): string
     {
         if ($this->isEternal()) {
-            throw OsstException::tokenNeverExpires();
+            throw SplitTokenException::tokenNeverExpires();
         }
 
         try {
@@ -302,27 +289,26 @@ final class Osst
                 ->setTimezone(new DateTimeZone(date_default_timezone_get()))
                 ->format($format);
         } catch (Throwable $e) {
-            throw new OsstException(sprintf('Unable to format expiration date: %s.', $e->getMessage()), $e);
+            throw new SplittokenException(sprintf('Unable to format expiration date: %s.', $e->getMessage()), $e);
         }
     }
 
     /**
      * Set the expiration time for the token using timestamp.
-     * @param  int           $timestamp The timestamp when the token should expire, defaults to +14 days
-     * @throws OsstException
+     * @param  int                 $timestamp The timestamp when the token should expire, defaults to +14 days
+     * @throws SplitTokenException
      * @return $this
-     * @psalm-suppress DeprecatedClass
      */
     public function setExpirationTime(?int $timestamp = null): self
     {
         if ($this->expirationTime) {
-            throw OsstException::propertyAlreadySet('Expiration time');
+            throw SplitTokenException::propertyAlreadySet('Expiration time');
         }
 
         $timestamp ??= time() + self::DEFAULT_EXPIRATION_TIME_OFFSET;
 
         if ($timestamp !== 0 && $timestamp <= time()) {
-            throw OsstException::expirationTimeInPast($timestamp);
+            throw SplitTokenException::expirationTimeInPast($timestamp);
         }
 
         $this->expirationTime = $timestamp;
@@ -334,28 +320,27 @@ final class Osst
      * Set the expiration time for the token using relative time.
      * @param string $offset The time interval the token expires in. Detaults to +14 days
      * @see https://www.php.net/manual/en/datetime.formats.relative.php
-     * @throws OsstException
+     * @throws SplitTokenException
      * @return $this
-     * @psalm-suppress DeprecatedClass
      */
     public function setExpirationOffset(string $offset = self::DEFAULT_EXPIRATION_DATE_OFFSET): self
     {
         if ($this->expirationTime) {
-            throw OsstException::propertyAlreadySet('Expiration time');
+            throw SplitTokenException::propertyAlreadySet('Expiration time');
         }
 
         if (!$offset) {
-            throw OsstException::emptyExpirationOffset();
+            throw SplitTokenException::emptyExpirationOffset();
         }
 
         try {
             $this->expirationTime = (new DateTimeImmutable())->modify($offset)->getTimestamp();
 
             if ($this->expirationTime <= time()) {
-                throw OsstException::expirationTimeInPast($this->expirationTime);
+                throw SplitTokenException::expirationTimeInPast($this->expirationTime);
             }
         } catch (Throwable $e) {
-            throw new OsstException(sprintf('Invalid expiration offset "%s": %s', $offset, $e->getMessage()), $e);
+            throw new SplitTokenException(sprintf('Invalid expiration offset "%s": %s', $offset, $e->getMessage()), $e);
         }
 
         return $this;
@@ -363,17 +348,16 @@ final class Osst
 
     /**
      * Set the expiration time for the token using DateTime immutable object.
-     * @param  DateTimeImmutable $expirationDate The date the token should expire at
-     * @throws OsstException
+     * @param  DateTimeImmutable   $expirationDate The date the token should expire at
+     * @throws SplitTokenException
      * @return $this
-     * @psalm-suppress DeprecatedClass
      */
     public function setExpirationDate(DateTimeImmutable $expirationDate): self
     {
         $this->expirationTime = $expirationDate->getTimestamp();
 
         if ($this->expirationTime <= time()) {
-            throw OsstException::expirationTimeInPast($this->expirationTime);
+            throw SplitTokenException::expirationTimeInPast($this->expirationTime);
         }
 
         return $this;
@@ -392,8 +376,8 @@ final class Osst
 
     /**
      * Check if the token is expired.
-     * @throws OsstException if the expiration time is empty
-     * @return bool          True if the token is expired, false otherwise
+     * @throws SplitTokenException if the expiration time is empty
+     * @return bool                True if the token is expired, false otherwise
      */
     public function isExpired(): bool
     {
@@ -444,7 +428,6 @@ final class Osst
      * @param  string|null    $additionalInfo Any additional info you want to convey along with the token, as string
      * @param  SharedKey|null $encryptionKey  If not empty, the data will be encrypted
      * @return $this
-     * @psalm-suppress DeprecatedClass
      */
     public function setAdditionalInfo(?string $additionalInfo, ?SharedKey $encryptionKey = null): self
     {
@@ -453,7 +436,7 @@ final class Osst
                 try {
                     $this->additionalInfo = Crypt::encrypt($additionalInfo, $encryptionKey);
                 } catch (CryptException $e) {
-                    throw OsstException::additionalInfoEncryptionError($e);
+                    throw SplitTokenException::additionalInfoEncryptionError($e);
                 }
             } else {
                 $this->additionalInfo = $additionalInfo;
@@ -466,18 +449,17 @@ final class Osst
     /**
      * Store the token in the database.
      * @throws InvalidTokenException If SQL error occurs
-     * @throws OsstException         if not enough data are provided
+     * @throws SplitTokenException   if not enough data are provided
      * @return $this
-     * @psalm-suppress DeprecatedClass
      */
     public function persist(): self
     {
         if (!$this->token) {
-            throw OsstException::tokenNotSet();
+            throw SplitTokenException::tokenNotSet();
         }
 
         if ($this->userId <= 0) {
-            throw OsstException::invalidUserId($this->userId);
+            throw SplitTokenException::invalidUserId($this->userId);
         }
 
         $sql = sprintf(
@@ -513,14 +495,13 @@ final class Osst
 
     /**
      * Revoke the token.
-     * @param  bool          $deleteToken If true, token is deleted from the database. If false (default), it is expired
-     * @throws OsstException
-     * @psalm-suppress DeprecatedClass
+     * @param  bool                $deleteToken If true, token is deleted. If false (default), it is expired
+     * @throws SplitTokenException
      */
     public function revokeToken(bool $deleteToken = false): void
     {
         if (!$this->token) {
-            throw OsstException::tokenNotSet();
+            throw SplitTokenException::tokenNotSet();
         }
 
         $this->expirationTime = time() - self::DEFAULT_EXPIRATION_TIME_OFFSET;

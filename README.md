@@ -216,18 +216,20 @@ The Password class has the following methods:
 * `static Lock(string $password, SharedKey $key): string` — Locks, i.e., hashes a password and encrypts it with a given key. Returns the encrypted hash in readable and storable format. A hashed password cannot be restored, so it is safe to be stored in a database.
 * `static Check(string $password, string $encryptedHash, SharedKey $key): bool` — Verifies whether a given password matches the provided hash. Returns `true` on success and `false` on failure.
 
-## 🍪 Osst, Simple Yet Secure Tokens Suitable for Authentication Cookies and Password Recovery
+## 🍪 SplitToken, Simple Yet Secure Token Suitable for Authentication Cookies and Password Recovery
 
-Oirë Simple Split Tokens (Osst) is a class inside Iridium that can be used for generating and validating secure tokens suitable for authentication cookies, password recovery, API keys and various other tasks.  
+**Note**! the `Osst` class is deprecated since version 1.2 and will be removed in version 2.0. It holds the same object but was renamed to `SplitToken` for simplicity.
+
+SplitToken is a class inside Iridium that can be used for generating and validating secure tokens suitable for authentication cookies, password recovery, API keys and various other tasks.  
 
 ### The Split Tokens Concept
 
-You can read everything about the split tokens authentication in [this 2017 article](https://paragonie.com/blog/2017/02/split-tokens-token-based-authentication-protocols-without-side-channels) by [Paragon Initiatives](https://paragonie.com). This library implements the idea outlined in that article in PHP.
+You can read everything about the split tokens authentication in [this 2017 article](https://paragonie.com/blog/2017/02/split-tokens-token-based-authentication-protocols-without-side-channels) by [Paragon Initiatives](https://paragonie.com). Iridium implements the idea outlined in that article in PHP.
 
 ### Usage Examples
 
-Osst uses fluent interface, i.e., all necessary methods can be chained.  
-Each time you instantiate a new Osst object, you need to provide a database connection as a PDO instance. If you don’t use PDO yet, consider using it, it’s convenient. If you use an ORM, you most likely have a `getPdo()` or a similar method.  
+SplitToken uses fluent interface, i.e., all necessary methods can be chained.  
+Each time you instantiate a new SplitToken object, you need to provide a database connection as a PDO instance. If you don’t use PDO yet, consider using it, it’s convenient. If you use an ORM, you most likely have a `getPdo()` or a similar method.  
 Support for popular ORMs is planned for a future version.
 
 #### Create a Table
@@ -257,20 +259,20 @@ The field lengths are optimal, the only one you may need to adjust is `additiona
 
 #### Create a Token
 
-First you need to create a token. There are some **required** properties and some *optional* ones you can set. If you don’t set one or more of the required properties, an `OsstException` will be thrown.
+First you need to create a token. There are some **required** properties marked in bold and some *optional* ones marked in italic you can set. If you don’t set one or more of the required properties, a `SplitTokenException` will be thrown.
 
 * `userId`, **required** — ID of the user the token belongs to, as an unsigned integer.
 * `expirationTime`, *optional* — Time when the token expires. Stored as timestamp (big integer), but can be set in various ways, see below. If not set or set to `0`, the token is eternal, i.e., it never expires.
-* `tokenType`, *optional* — If you want to perform an additional check of the token (say, separate password recovery tokens from e-mail change tokens), you may set a token type as an integer.
+* `tokenType`, *optional* — If you want to perform an additional check of the token (say, separate password recovery tokens from e-mail change tokens), you may set a token type as an integer. In the examples throughout this file we’ll use plain numbers, but we suggest using constants or enums instead.
 * `additionalInfo`, *optional* — Any additional information you want to convey with the token, as string. For instance, you can pass some JSON data here. The information can be additionally encrypted, see below.
 
 To create a token for user with ID of `123` and with token type of `3` expiring in an hour, and store it into the database, do the following:
 
 ```php
-use Oire\Iridium\Osst;
+use Oire\Iridium\SplitToken;
 
 // You should have set your $dbConnection first as a PDO instance
-$osst = (new Osst($dbConnection))
+$splitToken = (new SplitToken($dbConnection))
     ->setUserId(123)
     ->setExpirationTime(time() + 3600)
     ->setTokenType(3)
@@ -278,24 +280,24 @@ $osst = (new Osst($dbConnection))
     ->persist();
 ```
 
-Use `$osst->getToken()` to actually get the newly created token as a string.  
+Use `$splitToken->getToken()` to actually get the newly created token as a string.  
 If you want to create a non-expirable token, either use `makeEternal()` instead of `setExpirationTime()` for code readability, or skip this call altogether.
 
 #### Set and Validate a User-Provided Token
 
-If you received an Iridium token from the user, you also need to instantiate Osst and validate the token. You don't need to set all the properties as their values are taken from the database.
+If you received an Iridium token from the user, you also need to instantiate SplitToken and validate the token. You don't need to set all the properties as their values are taken from the database.
 
 ```php
 use Oire\Iridium\Exception\InvalidTokenException;
-use Oire\Iridium\Osst;
+use Oire\Iridium\SplitToken;
 
 try {
-    $osst = new Osst($dbConnection, $token);
+    $splitToken = new SplitToken($dbConnection, $token);
 } catch (InvalidTokenException $e) {
     // Something went wrong with the token: either it is invalid, not found or has been tampered with
 }
 
-if ($osst->isExpired()) {
+if ($splitToken->isExpired()) {
     // The token is correct but expired
 }
 ```
@@ -310,8 +312,8 @@ After a token is used once for authentication, password reset and other sensitiv
 * Deleting the token from the database whatsoever. To do this, pass `true` as the parameter to the `revokeToken()` method:
 
 ```php
-// Given that $osst contains a valid token
-$osst->revokeToken(true);
+// Given that $splitToken contains a valid token
+$splitToken->revokeToken(true);
 ```
 
 #### Clear Expired Tokens
@@ -319,7 +321,7 @@ $osst->revokeToken(true);
 From time to time you will need to delete all expired tokens from the database to reduce the table size and search times. There is a method to do this. It is static, so you have to provide your PDO instance as its parameter. It returns the number of tokens deleted from the database.
 
 ```php
-$deletedTokens = Osst::clearExpiredTokens($dbConnection);
+$deletedTokens = SplitToken::clearExpiredTokens($dbConnection);
 ```
 
 #### Three Ways of Setting Expiration Time
@@ -345,12 +347,12 @@ If your additional info contains sensitive data, you can encrypt it. To do this,
 
 ```php
 use Oire\Iridium\Key\SharedKey;
-use Oire\Iridium\Osst;
+use Oire\Iridium\SplitToken;
 
 $key = new SharedKey();
 // Store the key somewhere safe, i.e., in an environment variable. You can safely cast it to string for that (see above)
 $additionalInfo = '{"oldEmail": "john@example.com", "newEmail": "john.doe@example.com"}';
-$osst = (new Osst($dbConnection))
+$splitToken = (new SplitToken($dbConnection))
     ->setUserId($user->getId())
     ->setExpirationOffset('+30 minutes')
     ->setTokenType(self::TOKEN_TYPE_CHANGE_EMAIL)
@@ -358,23 +360,23 @@ $osst = (new Osst($dbConnection))
     ->persist();
 ```
 
-That's it. I.e., if the second parameter of `setAdditionalInfo()` is not empty and is a valid Iridium key, your additional information will be encrypted. If something is wrong, an `OsstException` will be thrown.  
-If you received a user-provided token whose additional info is encrypted, pass the key as the third parameter to the Osst constructor.
+That's it. I.e., if the second parameter of `setAdditionalInfo()` is not empty and is a valid Iridium key, your additional information will be encrypted. If something is wrong, a `SplitTokenException` will be thrown.  
+If you received a user-provided token whose additional info is encrypted, pass the key as the third parameter to the SplitToken constructor.
 
 ### Error Handling
 
-Osst throws two types of exceptions:
+SplitToken throws two types of exceptions:
 
 * `InvalidTokenException` is thrown when something really wrong happens to the token itself or to SQL queries related to the token (for example, a token is not found, it has been tampered with, its length is invalid or a PDO statement cannot be executed);
-* `OsstException` is thrown in most cases when you do something erroneously (for example, try to store an empty token into the database, forget to set a required property or try to set such a property when validating a user-provided token, try to set expiration time which is in the past etc.).
+* `SplitTokenException` is thrown in most cases when you do something erroneously (for example, try to store an empty token into the database, forget to set a required property or try to set such a property when validating a user-provided token, try to set expiration time which is in the past etc.).
 
 ### Methods
 
-Below all of the Osst methods are outlined.
+Below all of the SplitToken methods are outlined.
 
-* `__construct(PDO $dbConnection, string|null $token, Oire\Iridium\Key\SharedKey|null $additionalInfoDecryptionKey)` — Instantiate a new Osst object. Provide a PDO instance as the first parameter, the user-provided token as the second one, and the Iridium key for decrypting additional info as the third one. **Note**! Provide the token only if you received it from the user. If you want to create a fresh token, the second and third parameters must not be set.
-* `getDbConnection(): PDO` — Get the database connection for the current Osst instance as a PDO object.
-* `getToken(): string` — Get the token for the current Osst instance as a string. Throws `OsstException` if the token was not created or set before.
+* `__construct(PDO $dbConnection, string|null $token, Oire\Iridium\Key\SharedKey|null $additionalInfoDecryptionKey)` — Instantiate a new SplitToken object. Provide a PDO instance as the first parameter, the user-provided token as the second one, and the Iridium key for decrypting additional info as the third one. **Note**! Provide the token only if you received it from the user. If you want to create a fresh token, the second and third parameters must not be set.
+* `getDbConnection(): PDO` — Get the database connection for the current SplitToken instance as a PDO object.
+* `getToken(): string` — Get the token for the current SplitToken instance as a string. Throws `SplitTokenException` if the token was not created or set before.
 * `getUserId(): int` — Get the ID of the user the token belongs to, as an integer.
 * `setUserId(int $userId): self` — Set the user ID for the newly created token. Do not use this method and similar methods when validating a user-provided token, use them only when creating a new token. Returns `$this` for chainability.
 * `getExpirationTime(): int` — Get expiration time for the token as raw timestamp. Returns integer.

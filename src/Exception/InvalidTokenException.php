@@ -26,7 +26,7 @@ use Throwable;
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
-final class InvalidTokenException extends OsstException
+final class InvalidTokenException extends SplitTokenException
 {
     /** @psalm-suppress PossiblyUnusedReturnValue */
     public static function sqlError(Throwable $e): self
