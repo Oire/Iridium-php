@@ -1,3 +1,10 @@
+# Version 2.0
+
+* [#76](https://github.com/Oire/Iridium-php/pull/76):
+  Change default expiration time for a token to 1 hour. This value adds sanity for most cases.
+* Remove deprecated SymmetricKey and Osst classes.
+* Remove deprecated `tokenIsExpired()` method.
+
 # Version 1.2
 
 * [#52](https://github.com/Oire/Iridium-php/pull/52):

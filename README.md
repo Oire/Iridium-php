@@ -95,9 +95,8 @@ The Crypt module is used to encrypt and decrypt data.
 **Note**! Do not use this for managing passwords! Passwords must not be encrypted, they must be *hashed* instead. To manage passwords, use the Password module (see below).  
 Currently the Crypt module supports only shared key encryption, i.e., encryption and decryption is performed with one single key.
 
-### Shared Key
+### 🔑 Shared Key
 
-**Note**! the `SymmetricKey` class is deprecated since version 1.2 and will be removed in version 2.0. It holds the same object but was renamed to `SharedKey` for simplicity.
 This objects holds a key used to encrypt and decrypt data with the Crypt module. First you need to create a key and save it somewhere (i.e., in a .env file):
 
 ```php
@@ -218,8 +217,6 @@ The Password class has the following methods:
 
 ## 🍪 SplitToken, Simple Yet Secure Token Suitable for Authentication Cookies and Password Recovery
 
-**Note**! the `Osst` class is deprecated since version 1.2 and will be removed in version 2.0. It holds the same object but was renamed to `SplitToken` for simplicity.
-
 SplitToken is a class inside Iridium that can be used for generating and validating secure tokens suitable for authentication cookies, password recovery, API keys and various other tasks.  
 
 ### The Split Tokens Concept
@@ -229,7 +226,7 @@ You can read everything about the split tokens authentication in [this 2017 arti
 ### Usage Examples
 
 SplitToken uses fluent interface, i.e., all necessary methods can be chained.  
-Each time you instantiate a new SplitToken object, you need to provide a database connection as a PDO instance. If you don’t use PDO yet, consider using it, it’s convenient. If you use an ORM, you most likely have a `getPdo()` or a similar method.  
+Each time you instantiate a new SplitToken object, you need to provide a database connection as a PDO instance. If you don’t use PDO yet, consider using it, it’s convenient. If you use an ORM, you most likely have a `getPDO()` or a similar method.  
 Support for popular ORMs is planned for a future version.
 
 #### Create a Table
@@ -330,7 +327,7 @@ You may set expiration time in three different ways, as you like:
 
 * `setExpirationTime()` — Accepts a raw timestamp as integer. If set to `null` or `0`, the token is eternal and never expires.
 * `setExpirationDate()` — Accepts a `DateTimeImmutable` object.
-* `setExpirationOffset()` — Accepts a [relative datetime format](https://www.php.net/manual/en/datetime.formats.relative.php). Default is `+14 days`.
+* `setExpirationOffset()` — Accepts a [relative datetime format](https://www.php.net/manual/en/datetime.formats.relative.php). Default is `+1 hour`.
 
 #### Notes on Expiration Times
 
@@ -384,7 +381,7 @@ Below all of the SplitToken methods are outlined.
 * `getExpirationDateFormatted(string $format = 'Y-m-d H:i:s'): string` — Get expiration time for the token as date string. The default format is `2020-11-15 12:34:56`. The `$format` parameter must be a valid [date format](https://www.php.net/manual/en/function.date.php).
 * `setExpirationTime(int|null $timestamp = null): self` — Set expiration time for the token as a raw timestamp. If the timestamp is set to `null` or `0`, the token never expires.
 * `makeEternal(): self` — A convenience method that makes the token eternal, so it will never expire until you revoke it manually. Returns `$this` for chainability.
-* `setExpirationOffset(string $offset = '+14 days'): self` — Set expiration time for the token as a relative time offset. The default value is `+14 days`. The `$offset` parameter must be a valid [relative time format](https://www.php.net/manual/en/datetime.formats.relative.php). Returns `$this` for chainability.
+* `setExpirationOffset(string $offset = '+1 hour'): self` — Set expiration time for the token as a relative time offset. The default value is `+1 hour`. The `$offset` parameter must be a valid [relative time format](https://www.php.net/manual/en/datetime.formats.relative.php). Returns `$this` for chainability.
 * `setExpirationDate(DateTimeImmutable $expirationDate): self` — Set expiration time for the token as a [DateTimeImmutable](https://www.php.net/manual/en/class.datetimeimmutable.php) object. Returns `$this` for chainability.
 * `isEternal(): bool` — check if the token is eternal and never expires. Returns `true` if the token is eternal, `false` if it has expiration time set in the future or already expired.
 * `isExpired(): bool` — Check if the token is expired. Returns `true` if the token has already expired, `false` otherwise.

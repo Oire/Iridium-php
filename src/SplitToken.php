@@ -42,7 +42,7 @@ final class SplitToken
 {
     public const TABLE_NAME = 'iridium_tokens';
     public const DEFAULT_EXPIRATION_DATE_FORMAT = 'Y-m-d H:i:s';
-    public const DEFAULT_EXPIRATION_DATE_OFFSET = '+14 days';
+    public const DEFAULT_EXPIRATION_DATE_OFFSET = '+1 hour';
     public const DEFAULT_EXPIRATION_TIME_OFFSET = 1209600;
     private const TOKEN_SIZE = 36;
     private const SELECTOR_SIZE = 16;
@@ -295,7 +295,7 @@ final class SplitToken
 
     /**
      * Set the expiration time for the token using timestamp.
-     * @param  int                 $timestamp The timestamp when the token should expire, defaults to +14 days
+     * @param  int                 $timestamp The timestamp when the token should expire, defaults to +1 hour
      * @throws SplitTokenException
      * @return $this
      */
@@ -318,7 +318,7 @@ final class SplitToken
 
     /**
      * Set the expiration time for the token using relative time.
-     * @param string $offset The time interval the token expires in. Detaults to +14 days
+     * @param string $offset The time interval the token expires in. Defaults to +1 hour
      * @see https://www.php.net/manual/en/datetime.formats.relative.php
      * @throws SplitTokenException
      * @return $this
@@ -382,15 +382,6 @@ final class SplitToken
     public function isExpired(): bool
     {
         return $this->expirationTime !== 0 && $this->expirationTime <= time();
-    }
-
-    /**
-     * @deprecated 1.1 Use isExpired() instead
-     * @psalm-suppress PossiblyUnusedMethod
-     */
-    public function tokenIsExpired(): bool
-    {
-        return $this->isExpired();
     }
 
     /**
@@ -518,7 +509,7 @@ final class SplitToken
 
             try {
                 $statement->execute([':selector' => $this->selector]);
-            } catch (PdoException $e) {
+            } catch (PDOException $e) {
                 throw InvalidTokenException::sqlError($e);
             }
         } else {
@@ -536,7 +527,7 @@ final class SplitToken
                     ':expires' => $this->expirationTime,
                     ':selector' => $this->selector
                 ]);
-            } catch (PdoException $e) {
+            } catch (PDOException $e) {
                 throw InvalidTokenException::sqlError($e);
             }
         }
@@ -564,7 +555,7 @@ final class SplitToken
             $statement->execute([':time' => time()]);
 
             return $statement->rowCount();
-        } catch (PdoException $e) {
+        } catch (PDOException $e) {
             throw InvalidTokenException::sqlError($e);
         }
     }

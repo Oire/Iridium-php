@@ -6,7 +6,7 @@ use DateTimeImmutable;
 use Oire\Iridium\Exception\InvalidTokenException;
 use Oire\Iridium\Exception\SplitTokenException;
 use Oire\Iridium\SplitToken;
-use Pdo;
+use PDO;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -52,12 +52,11 @@ class SplitTokenTest extends TestCase
                 expiration_time BIGINT NOT NULL
             );
         SQL;
-
-    private static PDO $db;
+    private static ?PDO $db;
 
     public static function setUpBeforeClass(): void
     {
-        self::$db = new Pdo('sqlite::memory:');
+        self::$db = new PDO('sqlite::memory:');
         self::$db->query(sprintf(self::CREATE_TABLE_SQL, SplitToken::TABLE_NAME));
     }
 
