@@ -52,7 +52,7 @@ class SplitTokenTest extends TestCase
                 expiration_time BIGINT NOT NULL
             );
         SQL;
-    private static ?PDO $db;
+    private static PDO $db;
 
     public static function setUpBeforeClass(): void
     {
@@ -87,7 +87,7 @@ class SplitTokenTest extends TestCase
             ':expires' => $expirationTime
         ]);
 
-        $splittoken = new Splittoken(self::$db, self::TEST_TOKEN);
+        $splittoken = new SplitToken(self::$db, self::TEST_TOKEN);
 
         self::assertSame(self::$db, $splittoken->getDbConnection());
         self::assertSame(self::TEST_TOKEN, $splittoken->getToken());
@@ -99,16 +99,16 @@ class SplitTokenTest extends TestCase
 
     public function testCreateTokenAndSetExpirationTime(): void
     {
-        $startSplittoken = new Splittoken(self::$db);
+        $startSplitToken = new SplitToken(self::$db);
         $expirationTime = time() + 3600;
-        $token = $startSplittoken->getToken();
-        $startSplittoken
+        $token = $startSplitToken->getToken();
+        $startSplitToken
             ->setUserId(self::TEST_USER_ID)
             ->setExpirationTime($expirationTime)
             ->setAdditionalInfo(self::TEST_ADDITIONAL_INFO)
             ->persist();
 
-        $splittoken = new Splittoken(self::$db, $token);
+        $splittoken = new SplitToken(self::$db, $token);
 
         self::assertSame($token, $splittoken->getToken());
         self::assertSame(self::TEST_USER_ID, $splittoken->getUserId());
@@ -120,16 +120,16 @@ class SplitTokenTest extends TestCase
 
     public function testCreateTokenAndSetExpirationOffset(): void
     {
-        $startSplittoken = new Splittoken(self::$db);
-        $expirationTime = (new DateTimeImmutable())->modify(Splittoken::DEFAULT_EXPIRATION_DATE_OFFSET)->getTimestamp();
-        $token = $startSplittoken->getToken();
-        $startSplittoken
+        $startSplitToken = new SplitToken(self::$db);
+        $expirationTime = (new DateTimeImmutable())->modify(SplitToken::DEFAULT_EXPIRATION_DATE_OFFSET)->getTimestamp();
+        $token = $startSplitToken->getToken();
+        $startSplitToken
             ->setUserId(self::TEST_USER_ID)
             ->setTokenType(self::TEST_TOKEN_TYPE)
-            ->setExpirationOffset(Splittoken::DEFAULT_EXPIRATION_DATE_OFFSET)
+            ->setExpirationOffset(SplitToken::DEFAULT_EXPIRATION_DATE_OFFSET)
             ->persist();
 
-        $splittoken = new Splittoken(self::$db, $token);
+        $splittoken = new SplitToken(self::$db, $token);
 
         self::assertSame($token, $splittoken->getToken());
         self::assertSame(self::TEST_USER_ID, $splittoken->getUserId());
@@ -141,8 +141,8 @@ class SplitTokenTest extends TestCase
 
     public function testCreateTokenAndSetExpirationDate(): void
     {
-        $startSplittoken = new Splittoken(self::$db);
-        $expirationDate = (new DateTimeImmutable())->modify(Splittoken::DEFAULT_EXPIRATION_DATE_OFFSET);
+        $startSplittoken = new SplitToken(self::$db);
+        $expirationDate = (new DateTimeImmutable())->modify(SplitToken::DEFAULT_EXPIRATION_DATE_OFFSET);
         $token = $startSplittoken->getToken();
         $startSplittoken
             ->setUserId(self::TEST_USER_ID)
@@ -150,14 +150,14 @@ class SplitTokenTest extends TestCase
             ->setExpirationDate($expirationDate)
             ->persist();
 
-        $splittoken = new Splittoken(self::$db, $token);
+        $splittoken = new SplitToken(self::$db, $token);
 
         self::assertSame($token, $splittoken->getToken());
         self::assertSame(self::TEST_USER_ID, $splittoken->getUserId());
         self::assertSame(self::TEST_TOKEN_TYPE, $splittoken->getTokenType());
         self::assertSame($expirationDate->getTimestamp(), $splittoken->getExpirationDate()->getTimestamp());
         self::assertSame(
-            $expirationDate->format(Splittoken::DEFAULT_EXPIRATION_DATE_FORMAT),
+            $expirationDate->format(SplitToken::DEFAULT_EXPIRATION_DATE_FORMAT),
             $splittoken->getExpirationDateFormatted()
         );
         self::assertFalse($splittoken->isEternal());
@@ -166,7 +166,7 @@ class SplitTokenTest extends TestCase
 
     public function testCreateEternalToken(): void
     {
-        $startSplittoken = new Splittoken(self::$db);
+        $startSplittoken = new SplitToken(self::$db);
         $token = $startSplittoken->getToken();
         $startSplittoken
             ->setUserId(self::TEST_USER_ID)
@@ -174,7 +174,7 @@ class SplitTokenTest extends TestCase
             ->setAdditionalInfo(self::TEST_ADDITIONAL_INFO)
             ->persist();
 
-        $splittoken = new Splittoken(self::$db, $token);
+        $splittoken = new SplitToken(self::$db, $token);
 
         self::assertSame($token, $splittoken->getToken());
         self::assertSame(self::TEST_USER_ID, $splittoken->getUserId());
@@ -186,8 +186,8 @@ class SplitTokenTest extends TestCase
 
     public function testRevokeToken(): void
     {
-        $startSplittoken = new Splittoken(self::$db);
-        $expirationDate = (new DateTimeImmutable())->modify(Splittoken::DEFAULT_EXPIRATION_DATE_OFFSET);
+        $startSplittoken = new SplitToken(self::$db);
+        $expirationDate = (new DateTimeImmutable())->modify(SplitToken::DEFAULT_EXPIRATION_DATE_OFFSET);
         $token = $startSplittoken->getToken();
         $startSplittoken
             ->setUserId(self::TEST_USER_ID)
@@ -195,7 +195,7 @@ class SplitTokenTest extends TestCase
             ->setExpirationDate($expirationDate)
             ->persist();
 
-        $splittoken = new Splittoken(self::$db, $token);
+        $splittoken = new SplitToken(self::$db, $token);
 
         self::assertSame($token, $splittoken->getToken());
         self::assertFalse($splittoken->isExpired());
@@ -206,11 +206,11 @@ class SplitTokenTest extends TestCase
 
     public function testRevokeEternalToken(): void
     {
-        $startSplittoken = new Splittoken(self::$db);
+        $startSplittoken = new SplitToken(self::$db);
         $token = $startSplittoken->getToken();
         $startSplittoken->setUserId(self::TEST_USER_ID)->setTokenType(self::TEST_TOKEN_TYPE)->makeEternal()->persist();
 
-        $splittoken = new Splittoken(self::$db, $token);
+        $splittoken = new SplitToken(self::$db, $token);
 
         self::assertSame($token, $splittoken->getToken());
         self::assertFalse($splittoken->isExpired());
@@ -223,32 +223,32 @@ class SplitTokenTest extends TestCase
 
     public function testClearExpiredTokens(): void
     {
-        self::$db->query(sprintf('DELETE FROM %s', Splittoken::TABLE_NAME));
-        $splittoken1 = (new Splittoken(self::$db))->setUserId(1)->setExpirationTime(time() + 3600)->persist();
-        $splittoken2 = (new Splittoken(self::$db))->setUserId(2)->setExpirationTime(time() + 3660)->persist();
-        $splittoken3 = (new Splittoken(self::$db))->setUserId(3)->setExpirationTime(time() + 3720)->persist();
+        self::$db->query(sprintf('DELETE FROM %s', SplitToken::TABLE_NAME));
+        $splittoken1 = (new SplitToken(self::$db))->setUserId(1)->setExpirationTime(time() + 3600)->persist();
+        $splittoken2 = (new SplitToken(self::$db))->setUserId(2)->setExpirationTime(time() + 3660)->persist();
+        $splittoken3 = (new SplitToken(self::$db))->setUserId(3)->setExpirationTime(time() + 3720)->persist();
 
         $splittoken1->revokeToken();
         $splittoken2->revokeToken();
         $splittoken3->revokeToken(true);
 
-        self::assertSame(2, Splittoken::clearExpiredTokens(self::$db));
+        self::assertSame(2, SplitToken::clearExpiredTokens(self::$db));
     }
 
     public function testTrySetExpirationTimeInPast(): void
     {
-        self::expectException(SplittokenException::class);
+        self::expectException(SplitTokenException::class);
         self::expectExceptionMessage('Expiration time cannot be in the past');
 
-        (new Splittoken(self::$db))->setUserId(123)->setExpirationTime(time() - 3600)->persist();
+        (new SplitToken(self::$db))->setUserId(123)->setExpirationTime(time() - 3600)->persist();
     }
 
     public function testTryPersistWithInvalidUserId(): void
     {
-        self::expectException(SplittokenException::class);
+        self::expectException(SplitTokenException::class);
         self::expectExceptionMessage('Invalid user ID');
 
-        (new Splittoken(self::$db))->persist();
+        (new SplitToken(self::$db))->persist();
     }
 
     public function testInvalidTokenLength(): void
@@ -256,6 +256,6 @@ class SplitTokenTest extends TestCase
         self::expectException(InvalidTokenException::class);
         self::expectExceptionMessage('Invalid token length');
 
-        new Splittoken(self::$db, 'abc');
+        new SplitToken(self::$db, 'abc');
     }
 }

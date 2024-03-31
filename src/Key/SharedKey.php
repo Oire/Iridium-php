@@ -35,8 +35,8 @@ use Oire\Iridium\Exception\SharedKeyException;
 final class SharedKey
 {
     public const KEY_SIZE = 32;
-    private const ENCRYPTION_INFO = 'Iridium|V1|KeyForEncryption';
-    private const AUTHENTICATION_INFO = 'Iridium|V1|KeyForAuthentication';
+    private const ENCRYPTION_INFO = 'Iridium|V2|KeyForEncryption';
+    private const AUTHENTICATION_INFO = 'Iridium|V2|KeyForAuthentication';
     private string $key;
     private string $rawKey;
 
@@ -46,7 +46,7 @@ final class SharedKey
      */
     public function __construct(?string $key = null)
     {
-        if ($key) {
+        if ($key !== null) {
             try {
                 $this->rawKey = Base64::decode($key);
             } catch (Base64Exception $e) {
@@ -89,7 +89,7 @@ final class SharedKey
      */
     public function deriveKeys(?string $salt = null): DerivedKeys
     {
-        if ($salt) {
+        if ($salt !== null) {
             if (mb_strlen($salt, Crypt::STRING_ENCODING_8BIT) !== DerivedKeys::SALT_SIZE) {
                 throw new SharedKeyException('Given salt is of incorrect length.');
             }
@@ -97,12 +97,14 @@ final class SharedKey
             $salt = random_bytes(DerivedKeys::SALT_SIZE);
         }
 
+        /** @var string|false $encryptionKey */
         $encryptionKey = hash_hkdf(Crypt::HASH_FUNCTION, $this->rawKey, 0, self::ENCRYPTION_INFO, $salt);
 
         if ($encryptionKey === false) {
             throw SharedKeyException::encryptionKeyFailed();
         }
 
+        /** @var string|false $authenticationKey */
         $authenticationKey = hash_hkdf(Crypt::HASH_FUNCTION, $this->rawKey, 0, self::AUTHENTICATION_INFO, $salt);
 
         if ($authenticationKey === false) {

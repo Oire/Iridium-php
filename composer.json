@@ -9,11 +9,9 @@
         }
     ],
     "require": {
-        "php": ">=7.4"
+        "php": ">=8.1"
     },
     "require-dev": {
-        "captainhook/captainhook": "*",
-        "captainhook/plugin-composer": "*",
         "friendsofphp/php-cs-fixer": "*",
         "oire/php-code-style": "dev-master",
         "phpunit/phpunit": "*",
@@ -24,7 +22,7 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Andre Polykanine also known as Menelion Elensúlë",
+            "name": "André Polykanine also known as Menelion Elensúlë",
             "email": "ap@oire.me",
             "homepage": "https://github.com/Menelion",
             "role": "developer"
@@ -51,7 +49,7 @@
         },
         "allow-plugins": {
             "composer/package-versions-deprecated": true,
-            "captainhook/plugin-composer": true
+            "captainhook/plugin-composer": false
         }
     },
     "scripts": {
