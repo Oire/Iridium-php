@@ -171,6 +171,7 @@ final class Crypt
             throw new DecryptionException('Invalid encrypted text given.');
         }
 
+        /** @var string|false $message */
         $message = hash_hmac(self::HASH_FUNCTION, $salt . $iv . $encrypted, $derivedKeys->getAuthenticationKey(), true);
 
         if ($message === false) {

@@ -79,7 +79,7 @@ final class SplitToken
             throw InvalidTokenException::sqlError($e);
         }
 
-        if ($token) {
+        if ($token !== null && $token !== '') {
             $this->setToken($token, $additionalInfoKey);
         } else {
             $rawToken = random_bytes(self::TOKEN_SIZE);
@@ -111,7 +111,7 @@ final class SplitToken
      */
     public function getToken(): string
     {
-        if (!$this->token) {
+        if ($this->token === null || $this->token === '') {
             throw SplitTokenException::tokenNotSet();
         }
 
@@ -334,7 +334,14 @@ final class SplitToken
         }
 
         try {
-            $this->expirationTime = (new DateTimeImmutable())->modify($offset)->getTimestamp();
+            /** @var DateTimeImmutable|false $expirationDate */
+            $expirationDate = (new DateTimeImmutable())->modify($offset);
+
+            if (!$expirationDate) {
+                throw new SplitTokenException('Invalid expiration date');
+            }
+
+            $this->expirationTime = $expirationDate->getTimestamp();
 
             if ($this->expirationTime <= time()) {
                 throw SplitTokenException::expirationTimeInPast($this->expirationTime);
@@ -422,8 +429,8 @@ final class SplitToken
      */
     public function setAdditionalInfo(?string $additionalInfo, ?SharedKey $encryptionKey = null): self
     {
-        if ($additionalInfo) {
-            if ($encryptionKey) {
+        if ($additionalInfo !== null && $additionalInfo !== '') {
+            if ($encryptionKey !== null) {
                 try {
                     $this->additionalInfo = Crypt::encrypt($additionalInfo, $encryptionKey);
                 } catch (CryptException $e) {
@@ -445,7 +452,7 @@ final class SplitToken
      */
     public function persist(): self
     {
-        if (!$this->token) {
+        if ($this->token === null || $this->token === '') {
             throw SplitTokenException::tokenNotSet();
         }
 
@@ -491,7 +498,7 @@ final class SplitToken
      */
     public function revokeToken(bool $deleteToken = false): void
     {
-        if (!$this->token) {
+        if ($this->token === null || $this->token === '') {
             throw SplitTokenException::tokenNotSet();
         }
 

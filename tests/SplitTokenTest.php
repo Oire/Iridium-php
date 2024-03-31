@@ -52,7 +52,7 @@ class SplitTokenTest extends TestCase
                 expiration_time BIGINT NOT NULL
             );
         SQL;
-    private static ?PDO $db;
+    private static PDO $db;
 
     public static function setUpBeforeClass(): void
     {
