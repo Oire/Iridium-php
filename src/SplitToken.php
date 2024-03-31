@@ -289,7 +289,7 @@ final class SplitToken
                 ->setTimezone(new DateTimeZone(date_default_timezone_get()))
                 ->format($format);
         } catch (Throwable $e) {
-            throw new SplittokenException(sprintf('Unable to format expiration date: %s.', $e->getMessage()), $e);
+            throw new SplitTokenException(sprintf('Unable to format expiration date: %s.', $e->getMessage()), $e);
         }
     }
 

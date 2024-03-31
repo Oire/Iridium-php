@@ -43,8 +43,7 @@ final class DerivedKeys
         private string $salt,
         private string $encryptionKey,
         private string $authenticationKey
-    )
-    {
+    ) {
     }
 
     /** Getters  */
