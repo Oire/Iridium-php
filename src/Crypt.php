@@ -85,6 +85,8 @@ final class Crypt
         }
 
         $cipherText = $derivedKeys->getSalt() . $iv . $encrypted;
+
+        /** @var string|false */
         $hmac = hash_hmac(self::HASH_FUNCTION, $cipherText, $derivedKeys->getAuthenticationKey(), true);
 
         if ($hmac === false) {

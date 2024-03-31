@@ -31,9 +31,6 @@ use Oire\Iridium\Crypt;
 final class DerivedKeys
 {
     public const SALT_SIZE = 32;
-    private string $salt;
-    private string $encryptionKey;
-    private string $authenticationKey;
 
     /**
      * This value objects holds the keys derived from the provided shared key.
@@ -42,11 +39,12 @@ final class DerivedKeys
      * @param string $encryptionKey     the derived encryption key
      * @param string $authenticationKey The derived authentication key
      */
-    public function __construct(string $salt, string $encryptionKey, string $authenticationKey)
+    public function __construct(
+        private string $salt,
+        private string $encryptionKey,
+        private string $authenticationKey
+    )
     {
-        $this->salt = $salt;
-        $this->encryptionKey = $encryptionKey;
-        $this->authenticationKey = $authenticationKey;
     }
 
     /** Getters  */
