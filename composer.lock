@@ -1228,17 +1228,17 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Oire/php-code-style.git",
-                "reference": "1b5196b506f70ba55f273302d0b8baacacd34a33"
+                "reference": "6b8651a5dcd08b8c32bf7f9a968beca9427b0458"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Oire/php-code-style/zipball/1b5196b506f70ba55f273302d0b8baacacd34a33",
-                "reference": "1b5196b506f70ba55f273302d0b8baacacd34a33",
+                "url": "https://api.github.com/repos/Oire/php-code-style/zipball/6b8651a5dcd08b8c32bf7f9a968beca9427b0458",
+                "reference": "6b8651a5dcd08b8c32bf7f9a968beca9427b0458",
                 "shasum": ""
             },
             "require": {
                 "friendsofphp/php-cs-fixer": "*",
-                "php": ">=7.1"
+                "php": ">=8.2"
             },
             "default-branch": true,
             "type": "library",
@@ -1252,7 +1252,7 @@
             ],
             "authors": [
                 {
-                    "name": "Andre Polykanine also known as Menelion Elensúlë",
+                    "name": "André Polykanine also known as Menelion Elensúlë",
                     "email": "ap@oire.me",
                     "homepage": "https://github.com/Menelion",
                     "role": "developer"
@@ -1263,7 +1263,7 @@
                 "issues": "https://github.com/Oire/php-code-style/issues",
                 "source": "https://github.com/Oire/php-code-style"
             },
-            "time": "2021-10-07T23:25:32+00:00"
+            "time": "2024-04-01T23:26:52+00:00"
         },
         {
             "name": "phar-io/manifest",
