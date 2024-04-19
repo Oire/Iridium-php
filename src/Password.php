@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Oire\Iridium;
 
 use Oire\Iridium\Exception\DecryptionException;
@@ -36,12 +38,14 @@ use Oire\Iridium\Key\SharedKey;
 final class Password
 {
     /**
-     * Hash password, encrypt-then-MAC the hash
+     * Hash password, encrypt-then-MAC the hash.
      *
-     * @param  string            $password The password to hash
-     * @param  SharedKey         $key      The Iridium key for encryption
+     * @param string    $password The password to hash
+     * @param SharedKey $key      The Iridium key for encryption
+     *
      * @throws PasswordException
      * @return string            Returns encrypted result
+     *
      */
     public static function lock(string $password, SharedKey $key): string
     {
@@ -49,7 +53,7 @@ final class Password
             throw new PasswordException('Password must not be empty.');
         }
 
-        /** @var string|null|false */
+        /** @var string|false|null */
         $hash = password_hash(Base64::encode(hash(Crypt::HASH_FUNCTION, $password, true)), PASSWORD_DEFAULT);
 
         if ($hash === false || $hash === null) {
@@ -66,13 +70,15 @@ final class Password
     }
 
     /**
-     * VerifyHMAC-then-Decrypt the ciphertext to get the hash, then verify that the hash matches the password
+     * VerifyHMAC-then-Decrypt the ciphertext to get the hash, then verify that the hash matches the password.
      *
-     * @param  string            $password   The password to check
-     * @param  string            $cipherText The hash to match against
-     * @param  SharedKey         $key        The Iridium key used for encryption
+     * @param string    $password   The password to check
+     * @param string    $cipherText The hash to match against
+     * @param SharedKey $key        The Iridium key used for encryption
+     *
      * @throws PasswordException
      * @return bool              Returns true if the password is valid, false otherwise
+     *
      */
     public static function check(string $password, string $cipherText, SharedKey $key): bool
     {

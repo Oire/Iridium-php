@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Oire\Iridium\Exception;
 
 use RuntimeException;
@@ -7,7 +9,7 @@ use Throwable;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal

@@ -16,7 +16,6 @@
         "oire/php-code-style": "dev-master",
         "phpunit/phpunit": "*",
         "psalm/plugin-phpunit": "*",
-        "squizlabs/php_codesniffer": "*",
         "vimeo/psalm": "dev-master"
     },
     "license": "MIT",
@@ -48,13 +47,17 @@
             "*": "dist"
         },
         "allow-plugins": {
-            "composer/package-versions-deprecated": true,
-            "captainhook/plugin-composer": false
+            "composer/package-versions-deprecated": true
         }
     },
-    "scripts": {
-        "tests": "vendor/bin/phpunit",
-        "coding-style": "vendor/bin/php-cs-fixer fix --dry-run --diff --config=.php_cs.dist",
-        "clear": "rm -rf vendor/"
-    }
+    "funding": [
+        {
+            "type": "PayPal",
+            "url": "https://paypal.me/MenelionFr"
+        },
+        {
+            "type": "Ko-fi",
+            "url": "https://ko-fi/Menelion"
+        }
+    ]
 }

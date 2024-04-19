@@ -1,4 +1,5 @@
 <?php
+
 namespace Oire\Iridium\Tests;
 
 use Oire\Iridium\Crypt;

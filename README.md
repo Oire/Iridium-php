@@ -10,7 +10,7 @@ This library consists of several classes, or modules, and can be used for hashin
 
 ## Requirements
 
-Requires PHP 7.4 or later with _PDO_, _Mbstring_ and _OpenSSL_ enabled.
+Requires PHP 8.1 or later with _PDO_, _Mbstring_ and _OpenSSL_ enabled.
 
 ## Installation
 
@@ -225,8 +225,7 @@ You can read everything about the split tokens authentication in [this 2017 arti
 
 ### Usage Examples
 
-SplitToken uses fluent interface, i.e., all necessary methods can be chained.  
-Each time you instantiate a new SplitToken object, you need to provide a database connection as a PDO instance. If you don’t use PDO yet, consider using it, it’s convenient. If you use an ORM, you most likely have a `getPDO()` or a similar method.  
+Each time you use `SplitToken::create()` to generate a new token or `SplitToken::fromString()` to instantiate a new SplitToken object from a user-provided token, you need to provide a database connection as a PDO instance. If you don’t use PDO yet, consider using it, it’s convenient. If you use an ORM, you most likely have a `getPDO()` or a similar method.  
 Support for popular ORMs is planned for a future version.
 
 #### Create a Table
@@ -237,59 +236,63 @@ First you need to create the `iridium_tokens` table. For mySQL the statement is 
 ```sql
 CREATE TABLE `iridium_tokens` (
     `id` INT UNSIGNED NULL AUTO_INCREMENT PRIMARY KEY,
-    `user_id` INT UNSIGNED NOT NULL,
-    `token_type` INT NULL ,
+    `user_id` INT UNSIGNED NULL,
+    `token_type` TINYINT UNSIGNED NULL ,
     `selector` VARCHAR(25) NOT NULL,
     `verifier` VARCHAR(70) NOT NULL,
-    `additional_info` TEXT(300) NULL,
-    `expiration_time` BIGINT(20) UNSIGNED NOT NULL,
-    UNIQUE `token` (`selector`, `verifier`),
-    CONSTRAINT `fk_token_user_id`
+    `additional_info` TEXT NULL,
+    `expires_at` BIGINT(20) UNSIGNED NULL,
+    CONSTRAINT `fk_iridium_token_user`
         FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-        ON DELETE CASCADE
         ON UPDATE RESTRICT
+        ON DELETE CASCADE
 ) ENGINE = InnoDB;
 ```
 
 You may need to adjust the syntax to suit your particular database driver (see for example the SQLite statement in the tests), as well as the name of your `users` table.  
-The field lengths are optimal, the only one you may need to adjust is `additional_info`, if you are planning to use it for larger sets of data.
+The field lengths are optimal. Please remember though, that you need to adjust the length and sign (`UNSIGNED` or not) of the `user_id` field in the `FOREIGN KEY` constraint, otherwise you’ll get very cryptic errors from MySQL or MariaDB.
 
 #### Create a Token
 
-First you need to create a token. There are some **required** properties marked in bold and some *optional* ones marked in italic you can set. If you don’t set one or more of the required properties, a `SplitTokenException` will be thrown.
+First you need to create a token. There are some parameters you can set, but only the database connection is required, all the other parameters have default values.
 
-* `userId`, **required** — ID of the user the token belongs to, as an unsigned integer.
-* `expirationTime`, *optional* — Time when the token expires. Stored as timestamp (big integer), but can be set in various ways, see below. If not set or set to `0`, the token is eternal, i.e., it never expires.
-* `tokenType`, *optional* — If you want to perform an additional check of the token (say, separate password recovery tokens from e-mail change tokens), you may set a token type as an integer. In the examples throughout this file we’ll use plain numbers, but we suggest using constants or enums instead.
-* `additionalInfo`, *optional* — Any additional information you want to convey with the token, as string. For instance, you can pass some JSON data here. The information can be additionally encrypted, see below.
+* `dbConnection` — Database connection, as a PDO instance.
+* `expirationTime` — Time when the token expires. Stored as timestamp (big integer), but can be set either as an integer or as a string. If you provide a string, it will be fed to the `DateTimeImmutable` constructor. There is also a special value `0` (zero). If you set the expiration time to 0, the default expiration time will be used, it is equal to current time plus one hour. If `expirationTime` is set to `null`, the token is eternal, i.e., it never expires. The default value is `0`, i.e., expiration in one hour.
+* `userId` — ID of the user the token belongs to, as an unsigned integer. If it is set and is 0 or less, an exception will be thrown.
+* `tokenType` — If you want to perform an additional check of the token (say, separate password recovery tokens from e-mail change tokens), you may set a token type as an integer. In the examples throughout this file we’ll use plain numbers, but we suggest using an enum instead.
+* `additionalInfo` — Any additional information you want to convey with the token, as string. For instance, you can pass some JSON data here. The information can be additionally encrypted. **Note again!** Do not use this to store passwords, even obsolete ones, this can be decrypted.
+* `additionalInfoKey` — an Iridium shared key used to encrypt the additional info. 
 
-To create a token for user with ID of `123` and with token type of `3` expiring in an hour, and store it into the database, do the following:
+To create a token for user with ID of `123` and with token type of `3` expiring in half an hour, and store it into the database, do the following. You can of course use named arguments:
 
 ```php
 use Oire\Iridium\SplitToken;
 
 // You should have set your $dbConnection first as a PDO instance
-$splitToken = (new SplitToken($dbConnection))
-    ->setUserId(123)
-    ->setExpirationTime(time() + 3600)
-    ->setTokenType(3)
-    ->setAdditionalInfo('{"some": "data"}')
+$splitToken =  SplitToken::create(
+        dbConnection: $dbConnection,
+        expirationTime: time() + 1800,
+        userId: 123,
+        tokenType: 3,
+        additionalInfo: '{"some": "data"}
+    )
     ->persist();
 ```
 
 Use `$splitToken->getToken()` to actually get the newly created token as a string.  
-If you want to create a non-expirable token, either use `makeEternal()` instead of `setExpirationTime()` for code readability, or skip this call altogether.
+If you want to create a non-expirable token, explicitly set `expirationTime` to `null`.
 
 #### Set and Validate a User-Provided Token
 
-If you received an Iridium token from the user, you also need to instantiate SplitToken and validate the token. You don't need to set all the properties as their values are taken from the database.
+If you received an Iridium token from the user, you also need to instantiate SplitToken and validate the token. To do this, use `SplitToken::fromString()` instead of `create()`. You don't need to set all the properties as their values are taken from the database.  
+This method takes three parameters: database connection as PDO instance, the token as string, and optionally the additional info decryption key as Iridium shared key.
 
 ```php
 use Oire\Iridium\Exception\InvalidTokenException;
 use Oire\Iridium\SplitToken;
 
 try {
-    $splitToken = new SplitToken($dbConnection, $token);
+    $splitToken = SplitToken::fromString($token, $dbConnection);
 } catch (InvalidTokenException $e) {
     // Something went wrong with the token: either it is invalid, not found or has been tampered with
 }
@@ -303,14 +306,14 @@ if ($splitToken->isExpired()) {
 
 #### Revoke a Token
 
-After a token is used once for authentication, password reset and other sensitive operation, is expired or compromised, you must revoke, i.e., invalidate it. If you use Iridium tokens as API keys, tokens for unsubscribing from email lists and so on, you can make your token eternal or set the expiration time far in the future and not revoke the token after first use, certainly. If an eternal token is compromised, you must revoke it, also. There are two ways of revoking a token:
+After a token is used once for authentication, password reset and other sensitive operation, is expired or compromised, you must revoke, i.e., invalidate it. If you use Iridium tokens as API keys, tokens for unsubscribing from email lists and so on, you can make your token eternal or set the expiration time far in the future and not revoke the token after first use, certainly. If an eternal token is compromised, you must revoke it, also. The `revokeToken()` method returns a `SplitToken` instance with the token-related parameters set to `null`. When revoking a token, you have two possibilities:
 
 * Setting the expiration time for the token in the past (default);
 * Deleting the token from the database whatsoever. To do this, pass `true` as the parameter to the `revokeToken()` method:
 
 ```php
 // Given that $splitToken contains a valid token
-$splitToken->revokeToken(true);
+$splitToken = $splitToken->revokeToken(true);
 ```
 
 #### Clear Expired Tokens
@@ -321,74 +324,36 @@ From time to time you will need to delete all expired tokens from the database t
 $deletedTokens = SplitToken::clearExpiredTokens($dbConnection);
 ```
 
-#### Three Ways of Setting Expiration Time
-
-You may set expiration time in three different ways, as you like:
-
-* `setExpirationTime()` — Accepts a raw timestamp as integer. If set to `null` or `0`, the token is eternal and never expires.
-* `setExpirationDate()` — Accepts a `DateTimeImmutable` object.
-* `setExpirationOffset()` — Accepts a [relative datetime format](https://www.php.net/manual/en/datetime.formats.relative.php). Default is `+1 hour`.
-
 #### Notes on Expiration Times
 
 * All expiration times are internally stored as UTC timestamps.
-* Expiration times are set, compared and formatted according to the time of the PHP server, so you won't be in trouble even if your PHP and database server times are different for some reason.
-* Expiration time with value `0` makes your token eternal, so it never expires until you revoke it manually.
+* Expiration times are set, compared and formatted according to the time of the PHP server, so you won't be in trouble even if your database server time is slightly off for some reason.
+* Expiration time with value `0` (zero) sets the default value, i.e., the token will expire in an hour.
+* If expiration time is set to `null`, the token is eternal and never expires.
 * Microseconds for expiration times are ignored for now, their support is planned for a future version.
-
-#### Encrypt Additional Information
-
-You may store some sensitive data in the additional information for the token such as old and new e-mail address and similar things.  
-**Note**! Do **not** store plain-text passwords in this property, it can be decrypted! Passwords must not be decryptable, they must be *hashed* instead. If you need to handle passwords, use the Password class, it is suitable for proper password hashing (see above). You may store password hashes in this property, though.  
-If your additional info contains sensitive data, you can encrypt it. To do this, you first need to have an Iridium key (see above):
-
-```php
-use Oire\Iridium\Key\SharedKey;
-use Oire\Iridium\SplitToken;
-
-$key = new SharedKey();
-// Store the key somewhere safe, i.e., in an environment variable. You can safely cast it to string for that (see above)
-$additionalInfo = '{"oldEmail": "john@example.com", "newEmail": "john.doe@example.com"}';
-$splitToken = (new SplitToken($dbConnection))
-    ->setUserId($user->getId())
-    ->setExpirationOffset('+30 minutes')
-    ->setTokenType(self::TOKEN_TYPE_CHANGE_EMAIL)
-    ->setAdditionalInfo($additionalInfo, $key)
-    ->persist();
-```
-
-That's it. I.e., if the second parameter of `setAdditionalInfo()` is not empty and is a valid Iridium key, your additional information will be encrypted. If something is wrong, a `SplitTokenException` will be thrown.  
-If you received a user-provided token whose additional info is encrypted, pass the key as the third parameter to the SplitToken constructor.
 
 ### Error Handling
 
 SplitToken throws two types of exceptions:
 
 * `InvalidTokenException` is thrown when something really wrong happens to the token itself or to SQL queries related to the token (for example, a token is not found, it has been tampered with, its length is invalid or a PDO statement cannot be executed);
-* `SplitTokenException` is thrown in most cases when you do something erroneously (for example, try to store an empty token into the database, forget to set a required property or try to set such a property when validating a user-provided token, try to set expiration time which is in the past etc.).
+* `SplitTokenException` is thrown in most cases when you do something erroneously (for example, try to store an empty token into the database, try to set a negative user ID etc.).
 
 ### Methods
 
-Below all of the SplitToken methods are outlined.
+Below all of the SplitToken public methods are outlined.
 
-* `__construct(PDO $dbConnection, string|null $token, Oire\Iridium\Key\SharedKey|null $additionalInfoDecryptionKey)` — Instantiate a new SplitToken object. Provide a PDO instance as the first parameter, the user-provided token as the second one, and the Iridium key for decrypting additional info as the third one. **Note**! Provide the token only if you received it from the user. If you want to create a fresh token, the second and third parameters must not be set.
-* `getDbConnection(): PDO` — Get the database connection for the current SplitToken instance as a PDO object.
+* `static create(PDO $dbConnection, int|string|null $expirationTime = 0, int|null $userId = null, int|null $tokenType = null, string|null $additionalInfo = null, Oire\Iridium\Key\SharedKey|null $additionalInfoKey = null): self` — Generate a new token. All the parameters are described above, only the database connection is required. Expiration time is by default set to `0` which means the token expires in one hour. If `$additionalInfoKey` is not null, the additional info is encrypted with this key. Throws `SplitTokenException` if trying to set a non-positive user ID.
+* `static fromString(string $token, PDO $dbConnection, Oire\Iridium\SharedKey|null $additionalInfoKey): self` — Set and validate a user-provided token. If `$additionalInfoKey` is not null, decrypts the additional info stored in the database with this key.
 * `getToken(): string` — Get the token for the current SplitToken instance as a string. Throws `SplitTokenException` if the token was not created or set before.
 * `getUserId(): int` — Get the ID of the user the token belongs to, as an integer.
-* `setUserId(int $userId): self` — Set the user ID for the newly created token. Do not use this method and similar methods when validating a user-provided token, use them only when creating a new token. Returns `$this` for chainability.
 * `getExpirationTime(): int` — Get expiration time for the token as raw timestamp. Returns integer.
 * `getExpirationDate(): DateTimeImmutable` — Get expiration time for the token as a DateTimeImmutable object. Returns the date in the current time zone of your PHP server.
 * `getExpirationDateFormatted(string $format = 'Y-m-d H:i:s'): string` — Get expiration time for the token as date string. The default format is `2020-11-15 12:34:56`. The `$format` parameter must be a valid [date format](https://www.php.net/manual/en/function.date.php).
-* `setExpirationTime(int|null $timestamp = null): self` — Set expiration time for the token as a raw timestamp. If the timestamp is set to `null` or `0`, the token never expires.
-* `makeEternal(): self` — A convenience method that makes the token eternal, so it will never expire until you revoke it manually. Returns `$this` for chainability.
-* `setExpirationOffset(string $offset = '+1 hour'): self` — Set expiration time for the token as a relative time offset. The default value is `+1 hour`. The `$offset` parameter must be a valid [relative time format](https://www.php.net/manual/en/datetime.formats.relative.php). Returns `$this` for chainability.
-* `setExpirationDate(DateTimeImmutable $expirationDate): self` — Set expiration time for the token as a [DateTimeImmutable](https://www.php.net/manual/en/class.datetimeimmutable.php) object. Returns `$this` for chainability.
 * `isEternal(): bool` — check if the token is eternal and never expires. Returns `true` if the token is eternal, `false` if it has expiration time set in the future or already expired.
 * `isExpired(): bool` — Check if the token is expired. Returns `true` if the token has already expired, `false` otherwise.
 * `getTokenType(): int|null` — Get the type for the current token. Returns integer if the token type was set before, or null if the token has no type.
-* `setTokenType(int|null $tokenType): self` — Set the type for the current token, as integer or null. Returns `$this` for chainability.
 * `getAdditionalInfo(): string|null` — Get additional info for the token. Returns string or null, if additional info was not set before.
-* `setAdditionalInfo(string|null $additionalInfo, Oire\Iridium\Key\SharedKey|null $encryptionKey = null): self` — Set additional info for the current token. If the `$encryptionKey` parameter is not empty, tries to encrypt the additional information using the Crypt class. Returns `$this` for chainability.
 * `persist(): self` — Store the token into the database. Returns `$this` for chainability.
 * `revokeToken(bool $deleteToken = false): void` — Revoke. i.e., invalidate the current token after it is used. If the `$deleteToken` parameter is set to `true`, the token will be deleted from the database, and `getToken()` will return `null`. If it is set to `false` (default), the expiration time for the token will be updated and set to a value in the past. The method returns no value.
 * `static clearExpiredTokens(PDO $dbConnection): int` — Delete all expired tokens from the database. As it is a static method, it receives the database connection as a PDO object. Returns the number of deleted tokens, as integer.
@@ -407,7 +372,6 @@ Before committing, don’t forget to run all the needed checks, otherwise the CI
 ./vendor/bin/phpunit
 ./vendor/bin/psalm
 ./vendor/bin/php-cs-fixer fix
-./vendor/bin/phpcs .
 ```
 
 If PHPCodeSniffer finds any code style errors, fix them in your code.  
@@ -415,5 +379,5 @@ When your pull request is submitted, make sure all checks passed on CI.
 
 ## License
 
-Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, [The Magical Kingdom of Oirë](https://github.com/Oire/).  
+Copyright © 2021-2024 Andre Polykanine also known as Menelion Elensúlë, [The Magical Kingdom of Oirë](https://github.com/Oire/).  
 This software is licensed under an MIT license.

@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Oire\Iridium;
 
 use Oire\Iridium\Exception\Base64Exception;
@@ -46,10 +48,13 @@ final class Crypt
 
     /**
      * Encrypt data with a given key.
-     * @param  string              $plainText The data to be encrypted
-     * @param  SharedKey           $key       The Iridium key used for encryption
+     *
+     * @param string    $plainText The data to be encrypted
+     * @param SharedKey $key       The Iridium key used for encryption
+     *
      * @throws EncryptionException
      * @return string              Returns the encrypted data
+     *
      */
     public static function encrypt(string $plainText, SharedKey $key): string
     {
@@ -100,10 +105,13 @@ final class Crypt
 
     /**
      * Decrypt data with a given key.
-     * @param  string              $cipherText The encrypted data, as a string
-     * @param  SharedKey           $key        The Iridium key the data was encrypted with
+     *
+     * @param string    $cipherText The encrypted data, as a string
+     * @param SharedKey $key        The Iridium key the data was encrypted with
+     *
      * @throws DecryptionException
      * @return string              the decrypted plain text
+     *
      */
     public static function decrypt(string $cipherText, SharedKey $key): string
     {
@@ -199,11 +207,14 @@ final class Crypt
 
     /**
      * Change encryption key (for instance, if the old one is compromised).
-     * @param  string             $cipherText The encrypted data
-     * @param  SharedKey          $oldKey     The key the data was encrypted before
-     * @param  SharedKey          $newKey     The key for re-encrypting the data
+     *
+     * @param string    $cipherText The encrypted data
+     * @param SharedKey $oldKey     The key the data was encrypted before
+     * @param SharedKey $newKey     The key for re-encrypting the data
+     *
      * @throws SharedKeyException
      * @return string             Returns the re-encrypted data
+     *
      */
     public static function swapKey(string $cipherText, SharedKey $oldKey, SharedKey $newKey): string
     {

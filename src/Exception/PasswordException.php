@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Oire\Iridium\Exception;
 
 /**
@@ -25,6 +27,4 @@ namespace Oire\Iridium\Exception;
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
-class PasswordException extends IridiumException
-{
-}
+class PasswordException extends IridiumException {}

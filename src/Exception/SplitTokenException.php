@@ -1,10 +1,12 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Oire\Iridium\Exception;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -33,32 +35,6 @@ class SplitTokenException extends IridiumException
     }
 
     /** @psalm-suppress PossiblyUnusedReturnValue */
-    final public static function emptyExpirationOffset(): self
-    {
-        return new self('Expiration offset must not be empty.');
-    }
-
-    /** @psalm-suppress PossiblyUnusedReturnValue */
-    final public static function expirationTimeInPast(int $expirationTime): self
-    {
-        return new self(
-            sprintf('Expiration time cannot be in the past. The difference is -%d seconds.', time() - $expirationTime)
-        );
-    }
-
-    /** @psalm-suppress PossiblyUnusedReturnValue */
-    final public static function tokenNotSet(): self
-    {
-        return new self('The token is not set, please retrieve or create it first.');
-    }
-
-    /** @psalm-suppress PossiblyUnusedReturnValue */
-    final public static function propertyAlreadySet(string $property): self
-    {
-        return new self(sprintf('%s is already set in token validation.', ucfirst($property)));
-    }
-
-    /** @psalm-suppress PossiblyUnusedReturnValue */
     final public static function additionalInfoEncryptionError(CryptException $e): self
     {
         return new self(sprintf('Unable to encrypt additional info: %s.', $e->getMessage()), $e);
@@ -68,11 +44,5 @@ class SplitTokenException extends IridiumException
     final public static function additionalInfoDecryptionError(CryptException $e): self
     {
         return new self(sprintf('Unable to decrypt additional info: %s.', $e->getMessage()), $e);
-    }
-
-    /** @psalm-suppress PossiblyUnusedReturnValue */
-    final public static function tokenNeverExpires(): self
-    {
-        return new self('The token never expires.');
     }
 }

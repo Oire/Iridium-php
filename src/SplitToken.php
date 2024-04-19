@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Oire\Iridium;
 
 use DateTimeImmutable;
@@ -16,8 +18,9 @@ use Throwable;
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
  * Implements the split token authentication model proposed by Paragon Initiatives.
- * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2024 André Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  * Idea Copyright © 2017 Paragon Initiatives.
+ *
  * @see https://paragonie.com/blog/2017/02/split-tokens-token-based-authentication-protocols-without-side-channels
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -42,33 +45,30 @@ final class SplitToken
 {
     public const TABLE_NAME = 'iridium_tokens';
     public const DEFAULT_EXPIRATION_DATE_FORMAT = 'Y-m-d H:i:s';
-    public const DEFAULT_EXPIRATION_DATE_OFFSET = '+1 hour';
-    public const DEFAULT_EXPIRATION_TIME_OFFSET = 1209600;
+    public const DEFAULT_EXPIRATION_TIME_OFFSET = '+1 hour';
     private const TOKEN_SIZE = 36;
     private const SELECTOR_SIZE = 16;
     private const VERIFIER_SIZE = 20;
-    private PDO $dbConnection;
     private ?string $token = null;
     private ?string $selector = null;
     private ?string $hashedVerifier = null;
-    private int $userId = 0;
-    private int $expirationTime = 0;
-    private ?int $tokenType = null;
-    private ?string $additionalInfo = null;
 
     /**
      * Instantiate a new SplitToken object.
-     * @param PDO            $dbConnection      Connection to your database
-     * @param string|null    $token             A user-provided token
-     * @param SharedKey|null $additionalInfoKey The Iridium key to decrypt additional info for the token
+     *
+     * @param PDO         $dbConnection   Connection to the database
+     * @param int|null    $expirationTime expiration time of the token. Set to null if the token should not expire
+     * @param int|null    $userId         The ID of the user in the database
+     * @param int|null    $tokenType      A custom type for the token, most likely taken from an enum
+     * @param string|null $additionalInfo Some supplementary information attached to the token, like a JSON object
      */
-    public function __construct(
-        PDO $dbConnection,
-        ?string $token = null,
-        ?SharedKey $additionalInfoKey = null
+    private function __construct(
+        private PDO $dbConnection,
+        private ?int $expirationTime = null,
+        private ?int $userId = null,
+        private ?int $tokenType = null,
+        private ?string $additionalInfo = null
     ) {
-        $this->dbConnection = $dbConnection;
-
         try {
             $this->dbConnection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->dbConnection->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
@@ -78,61 +78,98 @@ final class SplitToken
         } catch (PDOException $e) {
             throw InvalidTokenException::sqlError($e);
         }
-
-        if ($token !== null && $token !== '') {
-            $this->setToken($token, $additionalInfoKey);
-        } else {
-            $rawToken = random_bytes(self::TOKEN_SIZE);
-            $this->token = Base64::encode($rawToken);
-            $this->selector = Base64::encode(mb_substr($rawToken, 0, self::SELECTOR_SIZE, Crypt::STRING_ENCODING_8BIT));
-            $this->hashedVerifier = Base64::encode(
-                hash(
-                    Crypt::HASH_FUNCTION,
-                    mb_substr($rawToken, self::SELECTOR_SIZE, self::VERIFIER_SIZE, Crypt::STRING_ENCODING_8BIT),
-                    true
-                )
-            );
-        }
     }
 
     /**
-     * Get the connection to the database.
-     * @return PDO Returns the connection to the database as a PDO object
+     * Create a new split token.
+     *
+     * @param PDO             $dbConnection      Connection to the database
+     * @param int|string|null $expirationTime    expiration time of the token. Set to null if the token should not expire
+     * @param int|null        $userId            The ID of the user in the database
+     * @param int|null        $tokenType         A custom type for the token, most likely taken from an enum
+     * @param string|null     $additionalInfo    Some supplementary information attached to the token, like a JSON object
+     * @param SharedKey|null  $additionalInfoKey An Iridium key to encrypt the additional info or decrypt it if it was encrypted before
+     *
+     * @return self Returns a newly created SplitToken
      */
-    public function getDbConnection(): PDO
-    {
-        return $this->dbConnection;
+    public static function create(
+        PDO $dbConnection,
+        int|string|null $expirationTime = 0,
+        ?int $userId = null,
+        ?int $tokenType = null,
+        ?string $additionalInfo = null,
+        ?SharedKey $additionalInfoKey = null
+    ): self {
+        $splitToken = new self($dbConnection);
+        $rawToken = random_bytes(self::TOKEN_SIZE);
+        $splitToken->token = Base64::encode($rawToken);
+        $splitToken->selector = Base64::encode(mb_substr($rawToken, 0, self::SELECTOR_SIZE, Crypt::STRING_ENCODING_8BIT));
+        $splitToken->hashedVerifier = Base64::encode(
+            hash(
+                Crypt::HASH_FUNCTION,
+                mb_substr($rawToken, self::SELECTOR_SIZE, self::VERIFIER_SIZE, Crypt::STRING_ENCODING_8BIT),
+                true
+            )
+        );
+
+        $splitToken->expirationTime = is_string($expirationTime)
+            ? (new DateTimeImmutable($expirationTime))->getTimestamp()
+            : ($expirationTime === 0 ? (new DateTimeImmutable(self::DEFAULT_EXPIRATION_TIME_OFFSET))->getTimestamp() : $expirationTime);
+
+        if ($userId !== null && $userId <= 0) {
+            throw SplitTokenException::invalidUserId($userId);
+        }
+
+        $splitToken->userId = $userId;
+        $splitToken->tokenType = $tokenType;
+
+        if ($additionalInfo !== null && $additionalInfoKey !== null) {
+            try {
+                $splitToken->additionalInfo = Crypt::encrypt($additionalInfo, $additionalInfoKey);
+            } catch (CryptException $e) {
+                throw SplitTokenException::additionalInfoEncryptionError($e);
+            }
+        } else {
+            $splitToken->additionalInfo = $additionalInfo;
+        }
+
+        return $splitToken;
     }
 
     /**
      * Get the token.
-     * @throws SplitTokenException If the token was not set or created beforehand
-     * @return string              Returns the token
+     *
+     * @return string|null Returns the token
      */
-    public function getToken(): string
+    public function getToken(): ?string
     {
-        if ($this->token === null || $this->token === '') {
-            throw SplitTokenException::tokenNotSet();
-        }
-
         return $this->token;
     }
 
     /**
      * Set and validate a user-provided token.
-     * @param  string                $token             The token provided by the user
-     * @param  SharedKey|null        $additionalInfoKey If not empty, the encrypted additional info will be decrypted
+     *
+     * @param string|null    $token             The token provided by the user
+     * @param PDO            $dbConnection      Connection to the database
+     * @param SharedKey|null $additionalInfoKey If not empty, the encrypted additional info will be decrypted
+     *
      * @throws InvalidTokenException
      */
-    private function setToken(string $token, ?SharedKey $additionalInfoKey = null): void
+    public static function fromString(?string $token, PDO $dbConnection, ?SharedKey $additionalInfoKey = null): self
     {
+        if ($token === null) {
+            throw InvalidTokenException::invalidTokenLength();
+        }
+
+        $splitToken = new self($dbConnection);
+
         try {
             $rawToken = Base64::decode($token);
         } catch (Base64Exception $e) {
             throw InvalidTokenException::invalidTokenFormat($e->getMessage(), $e);
         }
 
-        if (mb_strlen($rawToken, Crypt::STRING_ENCODING_8BIT) !== self::TOKEN_SIZE) {
+        if (self::TOKEN_SIZE !== mb_strlen($rawToken, Crypt::STRING_ENCODING_8BIT)) {
             throw InvalidTokenException::invalidTokenLength();
         }
 
@@ -145,10 +182,10 @@ final class SplitToken
                 WHERE selector = :selector',
             self::TABLE_NAME
         );
-        $statement = $this->dbConnection->prepare($sql);
+        $statement = $splitToken->dbConnection->prepare($sql);
 
         if (!$statement) {
-            $errorMessage = $this->dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
+            $errorMessage = $splitToken->dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
             throw InvalidTokenException::pdoStatementError($errorMessage);
         }
 
@@ -158,7 +195,7 @@ final class SplitToken
             throw InvalidTokenException::sqlError($e);
         }
 
-        /** @var string[] $result */
+        /** @var array<string, string|null> */
         $result = $statement->fetch();
 
         if (!$result) {
@@ -173,98 +210,72 @@ final class SplitToken
             )
         );
 
-        if (isset($result['verifier'])) {
-            $validVerifier = $result['verifier'];
-        } else {
+        if ($result['verifier'] === null || !hash_equals($verifier, $result['verifier'])) {
             throw InvalidTokenException::verifierError();
         }
 
-        if (!hash_equals($verifier, $validVerifier)) {
-            throw InvalidTokenException::verifierError();
-        }
+        $splitToken->token = $token;
+        $splitToken->selector = $selector;
+        $splitToken->hashedVerifier = $verifier;
+        $splitToken->userId = $result['user_id'] !== null ? (int) $result['user_id'] : null;
+        $splitToken->expirationTime = $result['expiration_time'] !== null ? (int) $result['expiration_time'] : null;
+        $splitToken->tokenType = $result['token_type'] !== null ? (int) $result['token_type'] : null;
 
-        $this->token = $token;
-        $this->selector = $selector;
-        $this->hashedVerifier = $verifier;
-
-        if (isset($result['user_id'])) {
-            $this->userId = (int) $result['user_id'];
-        } else {
-            throw SplitTokenException::invalidUserId(0);
-        }
-
-        $this->expirationTime = isset($result['expiration_time']) ? (int) $result['expiration_time'] : 0;
-        $this->tokenType = isset($result['token_type']) ? (int) $result['token_type'] : null;
-
-        if (isset($result['additional_info'])) {
-            if ($additionalInfoKey) {
+        if ($result['additional_info'] !== null) {
+            if ($additionalInfoKey !== null) {
                 try {
-                    $this->additionalInfo = Crypt::decrypt($result['additional_info'], $additionalInfoKey);
+                    $splitToken->additionalInfo = Crypt::decrypt($result['additional_info'], $additionalInfoKey);
                 } catch (CryptException $e) {
                     throw SplitTokenException::additionalInfoDecryptionError($e);
                 }
             } else {
-                $this->additionalInfo = $result['additional_info'];
+                $splitToken->additionalInfo = $result['additional_info'];
             }
+        } else {
+            $splitToken->additionalInfo = null;
         }
+
+        return $splitToken;
     }
 
     /**
      * Get the ID of the user the token belongs to.
      */
-    public function getUserId(): int
+    public function getUserId(): ?int
     {
         return $this->userId;
     }
 
     /**
-     * Set the ID of the user the token belongs to.
-     * @param  int                 $userId The ID of the user the token belongs to. Must be a positive integer.
-     * @throws SplitTokenException
-     * @return $this
-     */
-    public function setUserId(int $userId): self
-    {
-        if ($this->userId) {
-            throw SplitTokenException::propertyAlreadySet('User ID');
-        }
-
-        if ($userId <= 0) {
-            throw SplitTokenException::invalidUserId($userId);
-        }
-
-        $this->userId = $userId;
-
-        return $this;
-    }
-
-    /**
      * Get the expiration time of the token as timestamp.
+     *
+     * @return int|null Returns null if the token never expires
      */
-    public function getExpirationTime(): int
+    public function getExpirationTime(): ?int
     {
         return $this->expirationTime;
     }
 
     /**
      * Check if the token is eternal, i.e., never expires.
-     * @throws SplitTokenException If the expiration time is empty
-     * @return bool                True if the token never expires, false otherwise or if the token was revoked
+     *
+     * @return bool True if the token never expires, false otherwise or if the token was revoked
      */
     public function isEternal(): bool
     {
-        return $this->expirationTime === 0 && !$this->isExpired();
+        return $this->expirationTime === null;
     }
 
     /**
      * Get the expiration time of the token as a DateTime immutable object.
-     * @throws SplitTokenException If the token never expires
-     * @return DateTimeImmutable   Returns the expiration time in the default time zone
+     *
+     * @return DateTimeImmutable|null Returns the expiration time in the default time zone. If the token is eternal, returns null
+     * @psalm-suppress PossiblyUnusedMethod
      */
-    public function getExpirationDate(): DateTimeImmutable
+    public function getExpirationDate(): ?DateTimeImmutable
     {
-        if ($this->isEternal()) {
-            throw SplitTokenException::tokenNeverExpires();
+        if ($this->expirationTime === null) {
+            return null;
         }
 
         return (new DateTimeImmutable(sprintf('@%s', $this->expirationTime)))
@@ -273,15 +284,19 @@ final class SplitToken
 
     /**
      * Get the expiration time of the token in a given format.
+     *
      * @param string $format A valid date format. Defaults to `'Y-m-d H:i:s'`
+     *
      * @see https://www.php.net/manual/en/function.date.php
-     * @throws SplitTokenException if the date formatting fails or the token never expires
-     * @return string              Returns the expiration time as date string in given format
+     *
+     * @throws SplitTokenException if the date formatting fails
+     * @return string|null         Returns the expiration time as date string in given format. If the token is eternal, returns null
+     * @psalm-suppress PossiblyUnusedMethod
      */
-    public function getExpirationDateFormatted(string $format = self::DEFAULT_EXPIRATION_DATE_FORMAT): string
+    public function getExpirationDateFormatted(string $format = self::DEFAULT_EXPIRATION_DATE_FORMAT): ?string
     {
-        if ($this->isEternal()) {
-            throw SplitTokenException::tokenNeverExpires();
+        if ($this->expirationTime === null) {
+            return null;
         }
 
         try {
@@ -294,105 +309,20 @@ final class SplitToken
     }
 
     /**
-     * Set the expiration time for the token using timestamp.
-     * @param  int                 $timestamp The timestamp when the token should expire, defaults to +1 hour
-     * @throws SplitTokenException
-     * @return $this
-     */
-    public function setExpirationTime(?int $timestamp = null): self
-    {
-        if ($this->expirationTime) {
-            throw SplitTokenException::propertyAlreadySet('Expiration time');
-        }
-
-        $timestamp ??= time() + self::DEFAULT_EXPIRATION_TIME_OFFSET;
-
-        if ($timestamp !== 0 && $timestamp <= time()) {
-            throw SplitTokenException::expirationTimeInPast($timestamp);
-        }
-
-        $this->expirationTime = $timestamp;
-
-        return $this;
-    }
-
-    /**
-     * Set the expiration time for the token using relative time.
-     * @param string $offset The time interval the token expires in. Defaults to +1 hour
-     * @see https://www.php.net/manual/en/datetime.formats.relative.php
-     * @throws SplitTokenException
-     * @return $this
-     */
-    public function setExpirationOffset(string $offset = self::DEFAULT_EXPIRATION_DATE_OFFSET): self
-    {
-        if ($this->expirationTime) {
-            throw SplitTokenException::propertyAlreadySet('Expiration time');
-        }
-
-        if (!$offset) {
-            throw SplitTokenException::emptyExpirationOffset();
-        }
-
-        try {
-            /** @var DateTimeImmutable|false $expirationDate */
-            $expirationDate = (new DateTimeImmutable())->modify($offset);
-
-            if (!$expirationDate) {
-                throw new SplitTokenException('Invalid expiration date');
-            }
-
-            $this->expirationTime = $expirationDate->getTimestamp();
-
-            if ($this->expirationTime <= time()) {
-                throw SplitTokenException::expirationTimeInPast($this->expirationTime);
-            }
-        } catch (Throwable $e) {
-            throw new SplitTokenException(sprintf('Invalid expiration offset "%s": %s', $offset, $e->getMessage()), $e);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Set the expiration time for the token using DateTime immutable object.
-     * @param  DateTimeImmutable   $expirationDate The date the token should expire at
-     * @throws SplitTokenException
-     * @return $this
-     */
-    public function setExpirationDate(DateTimeImmutable $expirationDate): self
-    {
-        $this->expirationTime = $expirationDate->getTimestamp();
-
-        if ($this->expirationTime <= time()) {
-            throw SplitTokenException::expirationTimeInPast($this->expirationTime);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Makes the token eternal, so it will never expire.
-     * @return $this
-     */
-    public function makeEternal(): self
-    {
-        $this->expirationTime = 0;
-
-        return $this;
-    }
-
-    /**
      * Check if the token is expired.
+     *
      * @throws SplitTokenException if the expiration time is empty
      * @return bool                True if the token is expired, false otherwise
+     *
      */
     public function isExpired(): bool
     {
-        return $this->expirationTime !== 0 && $this->expirationTime <= time();
+        return null !== $this->expirationTime && $this->expirationTime <= time();
     }
 
     /**
      * Get the token type.
+     *
      * @return int|null The token type or null if it was not set before
      */
     public function getTokenType(): ?int
@@ -401,19 +331,8 @@ final class SplitToken
     }
 
     /**
-     * Set the token type.
-     * @param  int|null $tokenType Set this if you want to categorize your tokens by type. The default value is null
-     * @return $this
-     */
-    public function setTokenType(?int $tokenType): self
-    {
-        $this->tokenType = $tokenType;
-
-        return $this;
-    }
-
-    /**
      * Get the additional info for the token.
+     *
      * @return string|null The additional info or null if it was not set before
      */
     public function getAdditionalInfo(): ?string
@@ -422,44 +341,15 @@ final class SplitToken
     }
 
     /**
-     * Set the additional info for the token.
-     * @param  string|null    $additionalInfo Any additional info you want to convey along with the token, as string
-     * @param  SharedKey|null $encryptionKey  If not empty, the data will be encrypted
-     * @return $this
-     */
-    public function setAdditionalInfo(?string $additionalInfo, ?SharedKey $encryptionKey = null): self
-    {
-        if ($additionalInfo !== null && $additionalInfo !== '') {
-            if ($encryptionKey !== null) {
-                try {
-                    $this->additionalInfo = Crypt::encrypt($additionalInfo, $encryptionKey);
-                } catch (CryptException $e) {
-                    throw SplitTokenException::additionalInfoEncryptionError($e);
-                }
-            } else {
-                $this->additionalInfo = $additionalInfo;
-            }
-        }
-
-        return $this;
-    }
-
-    /**
      * Store the token in the database.
+     *
      * @throws InvalidTokenException If SQL error occurs
      * @throws SplitTokenException   if not enough data are provided
      * @return $this
+     *
      */
     public function persist(): self
     {
-        if ($this->token === null || $this->token === '') {
-            throw SplitTokenException::tokenNotSet();
-        }
-
-        if ($this->userId <= 0) {
-            throw SplitTokenException::invalidUserId($this->userId);
-        }
-
         $sql = sprintf(
             'INSERT INTO %s (
                 user_id, token_type, selector, verifier, additional_info, expiration_time
@@ -482,7 +372,7 @@ final class SplitToken
                 ':selector' => $this->selector,
                 ':verifier' => $this->hashedVerifier,
                 ':additional' => $this->additionalInfo,
-                ':expires' => $this->expirationTime
+                ':expires' => $this->expirationTime,
             ]);
         } catch (PDOException $e) {
             throw InvalidTokenException::sqlError($e);
@@ -493,16 +383,17 @@ final class SplitToken
 
     /**
      * Revoke the token.
-     * @param  bool                $deleteToken If true, token is deleted. If false (default), it is expired
+     *
+     * @param bool $deleteToken If true, token is deleted. If false (default), it is expired
+     *
      * @throws SplitTokenException
+     * @return $this
+     *
      */
-    public function revokeToken(bool $deleteToken = false): void
+    public function revokeToken(bool $deleteToken = false): self
     {
-        if ($this->token === null || $this->token === '') {
-            throw SplitTokenException::tokenNotSet();
-        }
-
-        $this->expirationTime = time() - self::DEFAULT_EXPIRATION_TIME_OFFSET;
+        $oneDayInSeconds = 86400;
+        $this->expirationTime = time() - $oneDayInSeconds;
 
         if ($deleteToken) {
             $statement = $this->dbConnection->prepare(
@@ -532,7 +423,7 @@ final class SplitToken
             try {
                 $statement->execute([
                     ':expires' => $this->expirationTime,
-                    ':selector' => $this->selector
+                    ':selector' => $this->selector,
                 ]);
             } catch (PDOException $e) {
                 throw InvalidTokenException::sqlError($e);
@@ -542,11 +433,15 @@ final class SplitToken
         $this->token = null;
         $this->selector = null;
         $this->hashedVerifier = null;
+
+        return $this;
     }
 
     /**
      * Delete all expired tokens from database.
-     * @param  PDO $dbConnection Connection to the database
+     *
+     * @param PDO $dbConnection Connection to the database
+     *
      * @return int Returns the number of deleted tokens
      */
     public static function clearExpiredTokens(PDO $dbConnection): int

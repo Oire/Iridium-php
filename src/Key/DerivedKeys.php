@@ -1,4 +1,5 @@
 <?php
+
 namespace Oire\Iridium\Key;
 
 use Oire\Iridium\Crypt;
@@ -35,6 +36,7 @@ final class DerivedKeys
     /**
      * This value objects holds the keys derived from the provided shared key.
      * Class constructor.
+     *
      * @param string $salt              The salt for deriving the keys
      * @param string $encryptionKey     the derived encryption key
      * @param string $authenticationKey The derived authentication key
@@ -43,8 +45,7 @@ final class DerivedKeys
         private string $salt,
         private string $encryptionKey,
         private string $authenticationKey
-    ) {
-    }
+    ) {}
 
     /** Getters  */
     public function getSalt(): string
@@ -64,11 +65,12 @@ final class DerivedKeys
 
     /**
      * Checks if the derived keys are valid.
+     *
      * @return bool Returns true if the keys are valid, false otherwise
      */
     public function areValid(): bool
     {
         return ($this->salt && $this->encryptionKey && $this->authenticationKey)
-            && mb_strlen($this->salt, Crypt::STRING_ENCODING_8BIT) === self::SALT_SIZE;
+            && self::SALT_SIZE === mb_strlen($this->salt, Crypt::STRING_ENCODING_8BIT);
     }
 }
