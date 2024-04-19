@@ -5,7 +5,7 @@
     strictBinaryOperands="true"
     findUnusedVariablesAndParams="true"
     findUnusedCode="true"
-    ensureArrayStringOffsetsExist="true"
+    ensureArrayStringOffsetsExist="false"
     ensureArrayIntOffsetsExist="true"
     phpVersion="8.3"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Oire\Iridium\Exception;
 
 /**
@@ -27,6 +29,4 @@ namespace Oire\Iridium\Exception;
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
-final class DecryptionException extends CryptException
-{
-}
+final class DecryptionException extends CryptException {}

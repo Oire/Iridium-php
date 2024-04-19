@@ -1,4 +1,5 @@
 <?php
+
 namespace Oire\Iridium;
 
 use Oire\Iridium\Exception\Base64Exception;
@@ -7,7 +8,7 @@ use Oire\Iridium\Exception\Base64Exception;
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
  * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
  *  Portions copyright © 2016 Paragon Initiative Enterprises.
- *  Portions copyright © 2014 Steve "Sc00bz" Thomas (steve at tobtu dot com)
+ *  Portions copyright © 2014 Steve "Sc00bz" Thomas (steve at tobtu dot com).
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -36,10 +37,13 @@ final class Base64
 
     /**
      * Encode into URL-safe Base64.
-     * @param  string          $data            The data to be encoded
-     * @param  bool            $preservePadding If true, replaces ='s with ~'s. If false (default), truncates padding
+     *
+     * @param string $data            The data to be encoded
+     * @param bool   $preservePadding If true, replaces ='s with ~'s. If false (default), truncates padding
+     *
      * @throws Base64Exception if encoding to base64 fails
      * @return string          The encoded data
+     *
      */
     public static function encode(string $data, bool $preservePadding = false): string
     {
@@ -52,9 +56,12 @@ final class Base64
 
     /**
      * Decode from URL-safe Base64.
-     * @param  string          $data The data to be decoded
+     *
+     * @param string $data The data to be decoded
+     *
      * @throws Base64Exception if decoding from Base64 fails
      * @return string          Returns decoded data
+     *
      */
     public static function decode(string $data): string
     {

@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Oire\Iridium\Key;
 
 use Oire\Iridium\Base64;
@@ -42,6 +44,7 @@ final class SharedKey
 
     /**
      * Instantiate a new Shared Key object.
+     *
      * @param string|null $key A key saved before (for example, from a .env file). If empty, a new key will be generated
      */
     public function __construct(?string $key = null)
@@ -53,7 +56,7 @@ final class SharedKey
                 throw new SharedKeyException(sprintf('Unable to decode provided key: %s.', $e->getMessage()), $e);
             }
 
-            if (mb_strlen($this->rawKey, Crypt::STRING_ENCODING_8BIT) !== self::KEY_SIZE) {
+            if (self::KEY_SIZE !== mb_strlen($this->rawKey, Crypt::STRING_ENCODING_8BIT)) {
                 throw new SharedKeyException('Invalid key given.');
             }
 
@@ -66,6 +69,7 @@ final class SharedKey
 
     /**
      * Get the key in raw binary form.
+     *
      * @return string The key in binary form as a string
      */
     public function getRawKey(): string
@@ -75,6 +79,7 @@ final class SharedKey
 
     /**
      * Get the key in readable and storable form.
+     *
      * @return string The key in readable form as a string
      */
     public function getKey(): string
@@ -84,13 +89,15 @@ final class SharedKey
 
     /**
      * Derive encryption and authentication keys for encrypt-then-MAC.
-     * @param  string|null $salt Salt for key derivation. Provide this only for decryption!
+     *
+     * @param string|null $salt Salt for key derivation. Provide this only for decryption!
+     *
      * @return DerivedKeys A derived keys object containing salt, encryptionKey and authenticationKey
      */
     public function deriveKeys(?string $salt = null): DerivedKeys
     {
         if ($salt !== null) {
-            if (mb_strlen($salt, Crypt::STRING_ENCODING_8BIT) !== DerivedKeys::SALT_SIZE) {
+            if (DerivedKeys::SALT_SIZE !== mb_strlen($salt, Crypt::STRING_ENCODING_8BIT)) {
                 throw new SharedKeyException('Given salt is of incorrect length.');
             }
         } else {
@@ -116,6 +123,7 @@ final class SharedKey
 
     /**
      * Get key object as string.
+     *
      * @return string Returns the key in readable and storable form
      */
     public function __toString(): string
