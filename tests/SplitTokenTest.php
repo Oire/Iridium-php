@@ -70,6 +70,8 @@ class SplitTokenTest extends TestCase
     public function testSetTokenFromsUserProvidedString(): void
     {
         $expirationTime = (new DateTimeImmutable(SplitToken::DEFAULT_EXPIRATION_TIME_OFFSET))->getTimestamp();
+
+        /** @psalm-suppress PossiblyNullReference */
         $statement = self::$db->prepare(
             sprintf(
                 'INSERT INTO %s (
@@ -89,6 +91,7 @@ class SplitTokenTest extends TestCase
             ':expires' => $expirationTime,
         ]);
 
+        /** @psalm-suppress PossiblyNullArgument */
         $splittoken = SplitToken::fromString(self::TEST_TOKEN, self::$db);
 
         self::assertSame(self::TEST_TOKEN, $splittoken->getToken());
@@ -101,6 +104,7 @@ class SplitTokenTest extends TestCase
     public function testCreateToken(): void
     {
         $expirationTime = time() + 10800;
+        /** @psalm-suppress PossiblyNullArgument */
         $startSplitToken = SplitToken::create(
             dbConnection: self::$db,
             expirationTime: $expirationTime,
@@ -111,6 +115,7 @@ class SplitTokenTest extends TestCase
             ->persist();
         $token = $startSplitToken->getToken();
 
+        /** @psalm-suppress PossiblyNullArgument */
         $splittoken = SplitToken::fromString($token, self::$db);
 
         self::assertSame($token, $splittoken->getToken());
@@ -123,6 +128,7 @@ class SplitTokenTest extends TestCase
 
     public function testCreateEternalToken(): void
     {
+        /** @psalm-suppress PossiblyNullArgument */
         $startSplittoken = SplitToken::create(self::$db, null)->persist();
         $token = $startSplittoken->getToken();
         $splittoken = SplitToken::fromString($token, self::$db);
@@ -137,8 +143,10 @@ class SplitTokenTest extends TestCase
 
     public function testSetDefaultExpirationTime(): void
     {
+        /** @psalm-suppress PossiblyNullArgument */
         $startSplitToken = SplitToken::create(self::$db)->persist();
         $token = $startSplitToken->getToken();
+        /** @psalm-suppress PossiblyNullArgument */
         $splitToken = SplitToken::fromString($token, self::$db);
 
         self::assertSame($token, $splitToken->getToken());
@@ -150,11 +158,12 @@ class SplitTokenTest extends TestCase
 
     public function testRevokeToken(): void
     {
+        /** @psalm-suppress PossiblyNullArgument */
         $startSplittoken = SplitToken::create(
-            self::$db,
-            time() + 3600,
-            self::TEST_USER_ID,
-            self::TEST_TOKEN_TYPE
+            dbConnection: self::$db,
+            expirationTime: time() + 3600,
+            userId: self::TEST_USER_ID,
+            tokenType: self::TEST_TOKEN_TYPE
         )
             ->persist();
         $token = $startSplittoken->getToken();
@@ -170,15 +179,17 @@ class SplitTokenTest extends TestCase
 
     public function testRevokeEternalToken(): void
     {
+        /** @psalm-suppress PossiblyNullArgument */
         $startSplittoken = SplitToken::create(
-            self::$db,
-            null,
-            self::TEST_USER_ID,
-            self::TEST_TOKEN_TYPE
+            dbConnection: self::$db,
+            expirationTime: null,
+            userId: self::TEST_USER_ID,
+            tokenType: self::TEST_TOKEN_TYPE
         )
             ->persist();
         $token = $startSplittoken->getToken();
 
+        /** @psalm-suppress PossiblyNullArgument */
         $splitToken = SplitToken::fromString($token, self::$db);
 
         self::assertSame($token, $splitToken->getToken());
@@ -194,6 +205,7 @@ class SplitTokenTest extends TestCase
 
     public function testClearExpiredTokens(): void
     {
+        /** @psalm-suppress PossiblyNullReference */
         self::$db->query(sprintf('DELETE FROM %s', SplitToken::TABLE_NAME));
         $splitToken1 = SplitToken::create(self::$db, time() + 3600, 1)->persist();
         $splitToken2 = SplitToken::create(self::$db, time() + 3660, 2)->persist();
@@ -211,6 +223,7 @@ class SplitTokenTest extends TestCase
         self::expectException(SplitTokenException::class);
         self::expectExceptionMessage('Invalid user ID');
 
+        /** @psalm-suppress PossiblyNullArgument */
         SplitToken::create(self::$db, time() + 3600, -3)->persist();
     }
 
@@ -219,6 +232,7 @@ class SplitTokenTest extends TestCase
         self::expectException(InvalidTokenException::class);
         self::expectExceptionMessage('Invalid token length');
 
+        /** @psalm-suppress PossiblyNullArgument */
         SplitToken::fromString('abc', self::$db);
     }
 }
