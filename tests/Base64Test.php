@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2025 André Polykanine also known as Menelion Elensúlë, Oire Software, https://github.com/Oire
  *  Portions copyright © 2016 Paragon Initiative Enterprises.
  *  Portions copyright © 2014 Steve "Sc00bz" Thomas (steve at tobtu dot com).
  *
@@ -34,10 +34,10 @@ use PHPUnit\Framework\TestCase;
  */
 class Base64Test extends TestCase
 {
-    private const RAW_DATA = 'The quick brown fox jumps over the lazy dog';
-    private const ENCODED_DATA = 'VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw==';
-    private const URL_SAFE_ENCODED_DATA = 'VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw~~';
-    private const PADDINGLESS_ENCODED_DATA = 'VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw';
+    private const string RAW_DATA = 'The quick brown fox jumps over the lazy dog';
+    private const string ENCODED_DATA = 'VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw==';
+    private const string URL_SAFE_ENCODED_DATA = 'VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw~~';
+    private const string PADDINGLESS_ENCODED_DATA = 'VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw';
 
     public function testDataEquality(): void
     {

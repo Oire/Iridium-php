@@ -379,5 +379,5 @@ When your pull request is submitted, make sure all checks passed on CI.
 
 ## License
 
-Copyright © 2021-2024 Andre Polykanine also known as Menelion Elensúlë, [The Magical Kingdom of Oirë](https://github.com/Oire/).  
+Copyright © 2021-2025 André Polykanine also known as Menelion Elensúlë, [Oire Software](https://github.com/Oire/).  
 This software is licensed under an MIT license.
