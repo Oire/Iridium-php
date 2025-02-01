@@ -6,7 +6,7 @@ namespace Oire\Iridium\Exception;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire.
+ * Copyright © 2021-2025 André Polykanine also known as Menelion Elensúlë, Oire Software, https://github.com/Oire
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -29,19 +29,19 @@ namespace Oire\Iridium\Exception;
 class SplitTokenException extends IridiumException
 {
     /** @psalm-suppress PossiblyUnusedReturnValue */
-    final public static function invalidUserId(int $userId = 0): self
+    public static function invalidUserId(int $userId = 0): self
     {
         return new self(sprintf('Invalid user ID. Should be a positive integer, %d given.', $userId));
     }
 
     /** @psalm-suppress PossiblyUnusedReturnValue */
-    final public static function additionalInfoEncryptionError(CryptException $e): self
+    public static function additionalInfoEncryptionError(CryptException $e): self
     {
         return new self(sprintf('Unable to encrypt additional info: %s.', $e->getMessage()), $e);
     }
 
     /** @psalm-suppress PossiblyUnusedReturnValue */
-    final public static function additionalInfoDecryptionError(CryptException $e): self
+    public static function additionalInfoDecryptionError(CryptException $e): self
     {
         return new self(sprintf('Unable to decrypt additional info: %s.', $e->getMessage()), $e);
     }

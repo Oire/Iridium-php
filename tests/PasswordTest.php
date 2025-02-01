@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2025 André Polykanine also known as Menelion Elensúlë, Oire Software, https://github.com/Oire
  * Copyright © 2016 Scott Arciszewski, Paragon Initiative Enterprises, https://paragonie.com.
  * Portions copyright © 2016 Taylor Hornby, Defuse Security Research and Development, https://defuse.ca.
  *
@@ -36,14 +36,14 @@ use PHPUnit\Framework\TestCase;
  */
 class PasswordTest extends TestCase
 {
-    private const CORRECT_PASSWORD = '4024Alohomora02*X%cZ/R&D';
-    private const WRONG_PASSWORD = '12345Alohomora02*X%cZ/r&d';
+    private const string CORRECT_PASSWORD = '4024Alohomora02*X%cZ/R&D';
+    private const string WRONG_PASSWORD = '12345Alohomora02*X%cZ/r&d';
 
     // Oire\Iridium\Base64::encode(hex2bin('000102030405060708090a0b0c0d0e0f'));
-    private const TEST_KEY = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
+    private const string TEST_KEY = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
 
     // Oire\Iridium\Base64::encode(hex2bin('0f0e0d0c0b0a09080706050403020100'))
-    private const NEW_KEY = 'Hx4dHBsaGRgXFhUUExIREA8ODQwLCgkIBwYFBAMCAQA';
+    private const string NEW_KEY = 'Hx4dHBsaGRgXFhUUExIREA8ODQwLCgkIBwYFBAMCAQA';
 
     public function testLockWithKnownKey(): void
     {

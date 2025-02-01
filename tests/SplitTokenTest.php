@@ -13,7 +13,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
- * Copyright © 2021-2022 Andre Polykanine also known as Menelion Elensúlë, https://github.com/Oire.
+ * Copyright © 2021-2025 André Polykanine also known as Menelion Elensúlë, Oire Software, https://github.com/Oire
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -36,14 +36,14 @@ use PHPUnit\Framework\TestCase;
 class SplitTokenTest extends TestCase
 {
     // Oire\Iridium\Base64::encode(hex2bin('0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324'));
-    private const TEST_TOKEN = 'AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMk';
-    private const TEST_SELECTOR = 'AQIDBAUGBwgJCgsMDQ4PEA';
-    private const TEST_VERIFIER = 'ERITFBUWFxgZGhscHR4fICEiIyQ';
-    private const TEST_HASHED_VERIFIER = 'UTYMVAte1GIu5QtgTAgjJ_Nb0R8ys_O-WdDbTMZPUbncmjA-hOJGZNM1aNedoBEH';
-    private const TEST_USER_ID = 12345;
-    private const TEST_TOKEN_TYPE = 3;
-    private const TEST_ADDITIONAL_INFO = '{"oldEmail":"test@example.com","newEmail":"john.doe@example.com"}';
-    private const CREATE_TABLE_SQL = <<<'SQL'
+    private const string TEST_TOKEN = 'AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMk';
+    private const string TEST_SELECTOR = 'AQIDBAUGBwgJCgsMDQ4PEA';
+    private const string TEST_VERIFIER = 'ERITFBUWFxgZGhscHR4fICEiIyQ';
+    private const string TEST_HASHED_VERIFIER = 'UTYMVAte1GIu5QtgTAgjJ_Nb0R8ys_O-WdDbTMZPUbncmjA-hOJGZNM1aNedoBEH';
+    private const int TEST_USER_ID = 12345;
+    private const int TEST_TOKEN_TYPE = 3;
+    private const string TEST_ADDITIONAL_INFO = '{"oldEmail":"test@example.com","newEmail":"john.doe@example.com"}';
+    private const string CREATE_TABLE_SQL = <<<'SQL'
             CREATE TABLE %s (
                 id INTEGER NOT NULL PRIMARY KEY,
                 user_id INTEGER,
@@ -54,7 +54,7 @@ class SplitTokenTest extends TestCase
                 expiration_time BIGINT
             );
         SQL;
-    private static PDO $db;
+    private static ?PDO $db;
 
     public static function setUpBeforeClass(): void
     {

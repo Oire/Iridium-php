@@ -18,7 +18,7 @@ use Throwable;
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
  * Implements the split token authentication model proposed by Paragon Initiatives.
- * Copyright © 2021-2024 André Polykanine also known as Menelion Elensúlë, https://github.com/Oire
+ * Copyright © 2021-2025 André Polykanine also known as Menelion Elensúlë, Oire Software, https://github.com/Oire
  * Idea Copyright © 2017 Paragon Initiatives.
  *
  * @see https://paragonie.com/blog/2017/02/split-tokens-token-based-authentication-protocols-without-side-channels
@@ -99,7 +99,8 @@ final class SplitToken
         ?int $tokenType = null,
         ?string $additionalInfo = null,
         ?SharedKey $additionalInfoKey = null
-    ): self {
+    ): self
+    {
         $splitToken = new self($dbConnection);
         $rawToken = random_bytes(self::TOKEN_SIZE);
         $splitToken->token = Base64::encode($rawToken);
