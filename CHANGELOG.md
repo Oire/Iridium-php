@@ -1,3 +1,9 @@
+# Version 3.0
+
+* [95](https://github.com/Oire/Iridium-php/pull/95):
+  Set minimum PHP version to 8.3;
+  Update Copyright year to 2025.
+
 # Version 2.0
 
 * [#76](https://github.com/Oire/Iridium-php/pull/76):
@@ -32,3 +38,7 @@
   Add basic PHP CodeSniffer ruleset.
   Add typed properties.
 * The `tokenIsExpired()` method is deprecated and will be removed in version 2.0, use `isExpired()` instead.
+
+# Version 1.0
+
+Initial release.
