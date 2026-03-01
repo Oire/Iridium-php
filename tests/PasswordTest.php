@@ -79,4 +79,32 @@ final class PasswordTest extends TestCase
         $this->expectException(PasswordException::class);
         Password::check(self::CORRECT_PASSWORD, $locked, $wrongKey);
     }
+
+    public function testEmptyPasswordThrowsOnLock(): void
+    {
+        $key = new SharedKey();
+
+        $this->expectException(PasswordException::class);
+
+        Password::lock('', $key);
+    }
+
+    public function testEmptyPasswordThrowsOnCheck(): void
+    {
+        $key = new SharedKey();
+        $locked = Password::lock(self::CORRECT_PASSWORD, $key);
+
+        $this->expectException(PasswordException::class);
+
+        Password::check('', $locked, $key);
+    }
+
+    public function testNeedsRehash(): void
+    {
+        $key = new SharedKey();
+        $locked = Password::lock(self::CORRECT_PASSWORD, $key);
+
+        // A freshly hashed password with current defaults should not need rehashing
+        self::assertFalse(Password::needsRehash($locked, $key));
+    }
 }

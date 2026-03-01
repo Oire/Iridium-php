@@ -16,7 +16,7 @@ jobs:
         run: docker compose build
 
       - name: Start services
-        run: docker compose up -d
+        run: docker compose up -d --no-deps php
 
       - name: Install dependencies
         run: docker compose exec php composer install --prefer-dist --no-interaction

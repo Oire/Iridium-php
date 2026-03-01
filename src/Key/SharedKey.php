@@ -8,6 +8,7 @@ use Oire\Iridium\Base64;
 use Oire\Iridium\Crypt;
 use Oire\Iridium\Exception\Base64Exception;
 use Oire\Iridium\Exception\SharedKeyException;
+use SensitiveParameter;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
@@ -30,9 +31,9 @@ use Oire\Iridium\Exception\SharedKeyException;
  */
 final class SharedKey
 {
-    public const KEY_SIZE = 32;
-    private const ENCRYPTION_INFO = 'Iridium|V2|KeyForEncryption';
-    private const AUTHENTICATION_INFO = 'Iridium|V2|KeyForAuthentication';
+    public const int KEY_SIZE = 32;
+    private const string ENCRYPTION_INFO = 'Iridium|V2|KeyForEncryption';
+    private const string AUTHENTICATION_INFO = 'Iridium|V2|KeyForAuthentication';
     private string $key;
     private string $rawKey;
 
@@ -41,7 +42,7 @@ final class SharedKey
      *
      * @param string|null $key A key saved before (for example, from a .env file). If empty, a new key will be generated
      */
-    public function __construct(?string $key = null)
+    public function __construct(#[SensitiveParameter] ?string $key = null)
     {
         if ($key !== null) {
             try {
@@ -59,6 +60,22 @@ final class SharedKey
             $this->rawKey = random_bytes(self::KEY_SIZE);
             $this->key = Base64::encode($this->rawKey);
         }
+    }
+
+    /**
+     * Create a new SharedKey instance via static factory method.
+     *
+     * @param string|null $key A key saved before. If null, a new key will be generated
+     */
+    public static function create(#[SensitiveParameter] ?string $key = null): self
+    {
+        return new self($key);
+    }
+
+    public function __destruct()
+    {
+        sodium_memzero($this->rawKey);
+        sodium_memzero($this->key);
     }
 
     /**

@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Oire\Iridium\Tests;
 
+use Oire\Iridium\Base64;
 use Oire\Iridium\Crypt;
 use Oire\Iridium\Exception\DecryptionException;
+use Oire\Iridium\Exception\EncryptionException;
 use Oire\Iridium\Key\SharedKey;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -35,6 +38,37 @@ final class CryptTest extends TestCase
     // Oire\Iridium\Base64::encode(hex2bin('0f0e0d0c0b0a09080706050403020100'))
     private const string NEW_KEY = 'Hx4dHBsaGRgXFhUUExIREA8ODQwLCgkIBwYFBAMCAQA';
     private const string DECRYPTABLE_DATA = 'Mischief managed!';
+
+    /**
+     * Pre-computed v1 (AES-256-CTR + HMAC-SHA384) test vector.
+     * Encrypted "Mischief managed!" with TEST_KEY using legacy v1 format.
+     */
+    private static string $legacyV1Vector = '';
+
+    /** @psalm-suppress MissingPureAnnotation */
+    #[Override]
+    public static function setUpBeforeClass(): void
+    {
+        // Generate a v1 test vector by directly using the legacy format
+        $key = new SharedKey(self::TEST_KEY);
+        $derivedKeys = $key->deriveKeys();
+        $iv = random_bytes(16);
+        $encrypted = openssl_encrypt(
+            self::DECRYPTABLE_DATA,
+            'aes-256-ctr',
+            $derivedKeys->getEncryptionKey(),
+            OPENSSL_RAW_DATA,
+            $iv
+        );
+
+        if ($encrypted === false) {
+            self::fail('OpenSSL encryption failed during v1 test vector generation.');
+        }
+
+        $cipherText = $derivedKeys->getSalt() . $iv . $encrypted;
+        $hmac = hash_hmac('sha384', $cipherText, $derivedKeys->getAuthenticationKey(), true);
+        self::$legacyV1Vector = Base64::encode($cipherText . $hmac);
+    }
 
     public function testEncryptAndDecryptWithKnownKey(): void
     {
@@ -84,6 +118,74 @@ final class CryptTest extends TestCase
 
         $swapped = Crypt::swapKey($encrypted, $oldKey, $newKey);
 
+        self::assertSame(self::DECRYPTABLE_DATA, Crypt::decrypt($swapped, $newKey));
+    }
+
+    public function testEncryptEmptyStringThrows(): void
+    {
+        $key = new SharedKey();
+
+        $this->expectException(EncryptionException::class);
+
+        Crypt::encrypt('', $key);
+    }
+
+    public function testDecryptEmptyStringThrows(): void
+    {
+        $key = new SharedKey();
+
+        $this->expectException(DecryptionException::class);
+
+        Crypt::decrypt('', $key);
+    }
+
+    public function testDecryptWithWrongKeyThrows(): void
+    {
+        $key = new SharedKey();
+        $wrongKey = new SharedKey();
+        $encrypted = Crypt::encrypt(self::DECRYPTABLE_DATA, $key);
+
+        $this->expectException(DecryptionException::class);
+
+        Crypt::decrypt($encrypted, $wrongKey);
+    }
+
+    public function testGcmEncryptionAndDecryption(): void
+    {
+        $key = new SharedKey(self::TEST_KEY);
+        $encrypted = Crypt::encrypt(self::DECRYPTABLE_DATA, $key);
+
+        // Verify the encrypted data starts with version byte 0x02
+        $raw = Base64::decode($encrypted);
+        self::assertSame(2, ord($raw[0]));
+
+        // Verify round-trip
+        self::assertSame(self::DECRYPTABLE_DATA, Crypt::decrypt($encrypted, $key));
+    }
+
+    public function testLegacyV1Decryption(): void
+    {
+        $key = new SharedKey(self::TEST_KEY);
+
+        self::assertSame(self::DECRYPTABLE_DATA, Crypt::decrypt(self::$legacyV1Vector, $key));
+    }
+
+    public function testSwapKeyMigratesV1ToV2(): void
+    {
+        $key = new SharedKey(self::TEST_KEY);
+        $newKey = new SharedKey(self::NEW_KEY);
+
+        // Verify v1 vector can be decrypted
+        self::assertSame(self::DECRYPTABLE_DATA, Crypt::decrypt(self::$legacyV1Vector, $key));
+
+        // Swap key — this re-encrypts with v2
+        $swapped = Crypt::swapKey(self::$legacyV1Vector, $key, $newKey);
+
+        // Verify new ciphertext uses v2 format (version byte 0x02)
+        $raw = Base64::decode($swapped);
+        self::assertSame(2, ord($raw[0]));
+
+        // Verify the content is still correct
         self::assertSame(self::DECRYPTABLE_DATA, Crypt::decrypt($swapped, $newKey));
     }
 }

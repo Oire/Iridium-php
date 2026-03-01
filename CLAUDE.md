@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Iridium is a security library for PHP providing authenticated encryption, password hashing, split token authentication, and URL-safe Base64 encoding. It is a mature, production library (v2.0) with zero runtime dependencies. Package name: `oire/iridium`.
+Iridium is a security library for PHP providing authenticated encryption, password hashing, split token authentication, and URL-safe Base64 encoding. It is a mature, production library (v3.0) with zero runtime dependencies. Package name: `oire/iridium`.
 
 ## Quick Reference
 
@@ -39,20 +39,23 @@ Always run all three checks before committing.
 ```
 src/
   Base64.php          # URL-safe Base64 encoding/decoding
-  Crypt.php           # AES-256-CTR + HMAC-SHA384 authenticated encryption
+  Crypt.php           # AES-256-GCM authenticated encryption (with legacy v1 AES-256-CTR + HMAC-SHA384 support)
   Password.php        # Password hashing (Argon2id/Bcrypt wrapper)
   SplitToken.php      # Split token pattern for secure token auth
   Exception/          # Exception hierarchy (all extend IridiumException)
   Key/
     SharedKey.php     # 32-byte shared encryption key wrapper
     DerivedKeys.php   # Derived encryption + authentication keys via HKDF
+  Storage/
+    TokenStorageInterface.php  # Interface for token persistence backends
+    PdoTokenStorage.php        # PDO (MySQL/MariaDB) implementation
 tests/
   *Test.php           # One test class per source module
 ```
 
 ## Coding Conventions
 
-- **PHP 8.3+** required. Extensions: PDO, pdo_mysql, Mbstring, OpenSSL.
+- **PHP 8.3+** required. Extensions: PDO, pdo_mysql, Mbstring, OpenSSL, Sodium.
 - **`declare(strict_types=1);`** in every PHP file.
 - **All classes are `final`** except base exception classes.
 - **Namespace**: `Oire\Iridium\` (PSR-4 mapped to `src/`). Tests: `Oire\Iridium\Tests\`.
@@ -70,7 +73,7 @@ tests/
 
 ## Testing
 
-- PHPUnit with test suite named "Colloportus" (see `phpunit.xml.dist`).
+- PHPUnit with test suite named "Iridium" (see `phpunit.xml.dist`).
 - Tests use MariaDB via Docker Compose for `SplitToken` persistence tests.
 - CI runs on PHP 8.3, 8.4, and 8.5 on Ubuntu via Docker.
 
@@ -92,6 +95,7 @@ This is a cryptographic library. When making changes:
 
 - Never weaken cryptographic parameters (key sizes, hash functions, algorithms).
 - Preserve constant-time comparisons (`hash_equals()`). Never replace with `===`.
-- Maintain the encrypt-then-MAC pattern in `Crypt`.
+- Crypt v2 uses AES-256-GCM (AEAD). Legacy v1 (AES-256-CTR + HMAC-SHA384, encrypt-then-MAC) is preserved for backward-compatible decryption.
 - Keep the split token pattern intact: selector (plaintext lookup) + verifier (hashed comparison).
+- Key material is zeroed via `sodium_memzero()` in destructors. Do not make key properties `readonly`.
 - Do not introduce timing side channels.

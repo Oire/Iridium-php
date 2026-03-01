@@ -9,6 +9,7 @@ use Oire\Iridium\Exception\EncryptionException;
 use Oire\Iridium\Exception\PasswordException;
 use Oire\Iridium\Exception\SharedKeyException;
 use Oire\Iridium\Key\SharedKey;
+use SensitiveParameter;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
@@ -40,9 +41,9 @@ final class Password
      * @throws PasswordException
      * @return string            Returns encrypted result
      */
-    public static function lock(string $password, SharedKey $key): string
+    public static function lock(#[SensitiveParameter] string $password, SharedKey $key): string
     {
-        if (!$password) {
+        if ($password === '') {
             throw new PasswordException('Password must not be empty.');
         }
 
@@ -58,7 +59,7 @@ final class Password
         } catch (SharedKeyException $e) {
             throw new PasswordException(sprintf('Invalid key given: %s', $e->getMessage()), $e);
         } catch (EncryptionException $e) {
-            throw new PasswordException(sprintf('Encryption failed: %s.', $e->getMessage()), $e);
+            throw new PasswordException(sprintf('Encryption failed: %s', $e->getMessage()), $e);
         }
     }
 
@@ -73,9 +74,9 @@ final class Password
      * @return bool              Returns true if the password is valid, false otherwise
      *
      */
-    public static function check(string $password, string $cipherText, SharedKey $key): bool
+    public static function check(#[SensitiveParameter] string $password, string $cipherText, SharedKey $key): bool
     {
-        if (!$password) {
+        if ($password === '') {
             throw new PasswordException('Password must not be empty.');
         }
 
@@ -84,9 +85,31 @@ final class Password
         } catch (SharedKeyException $e) {
             throw new PasswordException(sprintf('Invalid key given: %s', $e->getMessage()), $e);
         } catch (DecryptionException $e) {
-            throw new PasswordException(sprintf('Decryption failed: %s.', $e->getMessage()), $e);
+            throw new PasswordException(sprintf('Decryption failed: %s', $e->getMessage()), $e);
         }
 
         return password_verify(Base64::encode(hash(Crypt::HASH_FUNCTION, $password, true)), $hash);
+    }
+
+    /**
+     * Check if a stored password hash needs rehashing (e.g., because the algorithm defaults changed).
+     *
+     * @param string    $cipherText The encrypted hash stored in the database
+     * @param SharedKey $key        The Iridium key used for encryption
+     *
+     * @throws PasswordException
+     * @return bool              Returns true if the hash needs rehashing, false otherwise
+     */
+    public static function needsRehash(string $cipherText, SharedKey $key): bool
+    {
+        try {
+            $hash = Crypt::decrypt($cipherText, $key);
+        } catch (SharedKeyException $e) {
+            throw new PasswordException(sprintf('Invalid key given: %s', $e->getMessage()), $e);
+        } catch (DecryptionException $e) {
+            throw new PasswordException(sprintf('Decryption failed: %s', $e->getMessage()), $e);
+        }
+
+        return password_needs_rehash($hash, PASSWORD_DEFAULT);
     }
 }

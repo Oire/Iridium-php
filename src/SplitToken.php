@@ -11,8 +11,7 @@ use Oire\Iridium\Exception\CryptException;
 use Oire\Iridium\Exception\InvalidTokenException;
 use Oire\Iridium\Exception\SplitTokenException;
 use Oire\Iridium\Key\SharedKey;
-use PDO;
-use PDOException;
+use Oire\Iridium\Storage\TokenStorageInterface;
 use Throwable;
 
 /**
@@ -37,12 +36,12 @@ use Throwable;
  */
 final class SplitToken
 {
-    public const TABLE_NAME = 'iridium_tokens';
-    public const DEFAULT_EXPIRATION_DATE_FORMAT = 'Y-m-d H:i:s';
-    public const DEFAULT_EXPIRATION_TIME_OFFSET = '+1 hour';
-    private const TOKEN_SIZE = 36;
-    private const SELECTOR_SIZE = 16;
-    private const VERIFIER_SIZE = 20;
+    public const string TABLE_NAME = 'iridium_tokens';
+    public const string DEFAULT_EXPIRATION_DATE_FORMAT = 'Y-m-d H:i:s';
+    public const string DEFAULT_EXPIRATION_TIME_OFFSET = '+1 hour';
+    private const int TOKEN_SIZE = 36;
+    private const int SELECTOR_SIZE = 16;
+    private const int VERIFIER_SIZE = 20;
     private ?string $token = null;
     private ?string $selector = null;
     private ?string $hashedVerifier = null;
@@ -50,52 +49,43 @@ final class SplitToken
     /**
      * Instantiate a new SplitToken object.
      *
-     * @param PDO         $dbConnection   Connection to the database
-     * @param int|null    $expirationTime expiration time of the token. Set to null if the token should not expire
-     * @param int|null    $userId         The ID of the user in the database
-     * @param int|null    $tokenType      A custom type for the token, most likely taken from an enum
-     * @param string|null $additionalInfo Some supplementary information attached to the token, like a JSON object
+     * @param TokenStorageInterface $storage        Storage backend for token persistence
+     * @param int|null              $expirationTime expiration time of the token. Set to null if the token should not expire
+     * @param int|null              $userId         The ID of the user in the database
+     * @param int|null              $tokenType      A custom type for the token, most likely taken from an enum
+     * @param string|null           $additionalInfo Some supplementary information attached to the token, like a JSON object
+     *
+     * @psalm-mutation-free
      */
     private function __construct(
-        private PDO $dbConnection,
+        private TokenStorageInterface $storage,
         private ?int $expirationTime = null,
         private ?int $userId = null,
         private ?int $tokenType = null,
         private ?string $additionalInfo = null
-    ) {
-        try {
-            $this->dbConnection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $this->dbConnection->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-            $this->dbConnection->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-            $this->dbConnection->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
-            $this->dbConnection->setAttribute(PDO::ATTR_CASE, PDO::CASE_NATURAL);
-        } catch (PDOException $e) {
-            throw InvalidTokenException::sqlError($e);
-        }
-    }
+    ) {}
 
     /**
      * Create a new split token.
      *
-     * @param PDO             $dbConnection      Connection to the database
-     * @param int|string|null $expirationTime    expiration time of the token. Set to null if the token should not expire
-     * @param int|null        $userId            The ID of the user in the database
-     * @param int|null        $tokenType         A custom type for the token, most likely taken from an enum
-     * @param string|null     $additionalInfo    Some supplementary information attached to the token, like a JSON object
-     * @param SharedKey|null  $additionalInfoKey An Iridium key to encrypt the additional info or decrypt it if it was encrypted before
+     * @param TokenStorageInterface $storage           Storage backend for token persistence
+     * @param int|string|null       $expirationTime    expiration time of the token. Set to null if the token should not expire
+     * @param int|null              $userId            The ID of the user in the database
+     * @param int|null              $tokenType         A custom type for the token, most likely taken from an enum
+     * @param string|null           $additionalInfo    Some supplementary information attached to the token, like a JSON object
+     * @param SharedKey|null        $additionalInfoKey An Iridium key to encrypt the additional info or decrypt it if it was encrypted before
      *
      * @return self Returns a newly created SplitToken
      */
     public static function create(
-        PDO $dbConnection,
+        TokenStorageInterface $storage,
         int|string|null $expirationTime = 0,
         ?int $userId = null,
         ?int $tokenType = null,
         ?string $additionalInfo = null,
         ?SharedKey $additionalInfoKey = null
-    ): self
-    {
-        $splitToken = new self($dbConnection);
+    ): self {
+        $splitToken = new self($storage);
         $rawToken = random_bytes(self::TOKEN_SIZE);
         $splitToken->token = Base64::encode($rawToken);
         $splitToken->selector = Base64::encode(mb_substr($rawToken, 0, self::SELECTOR_SIZE, Crypt::STRING_ENCODING_8BIT));
@@ -144,19 +134,15 @@ final class SplitToken
     /**
      * Set and validate a user-provided token.
      *
-     * @param string|null    $token             The token provided by the user
-     * @param PDO            $dbConnection      Connection to the database
-     * @param SharedKey|null $additionalInfoKey If not empty, the encrypted additional info will be decrypted
+     * @param string                $token             The token provided by the user
+     * @param TokenStorageInterface $storage           Storage backend for token persistence
+     * @param SharedKey|null        $additionalInfoKey If not empty, the encrypted additional info will be decrypted
      *
      * @throws InvalidTokenException
      */
-    public static function fromString(?string $token, PDO $dbConnection, ?SharedKey $additionalInfoKey = null): self
+    public static function fromString(string $token, TokenStorageInterface $storage, ?SharedKey $additionalInfoKey = null): self
     {
-        if ($token === null) {
-            throw InvalidTokenException::invalidTokenLength();
-        }
-
-        $splitToken = new self($dbConnection);
+        $splitToken = new self($storage);
 
         try {
             $rawToken = Base64::decode($token);
@@ -170,30 +156,9 @@ final class SplitToken
 
         $selector = Base64::encode(mb_substr($rawToken, 0, self::SELECTOR_SIZE, Crypt::STRING_ENCODING_8BIT));
 
-        $sql = sprintf(
-            'SELECT
-                user_id, token_type, selector, verifier, additional_info, expiration_time
-                FROM %s
-                WHERE selector = :selector',
-            self::TABLE_NAME
-        );
-        $statement = $splitToken->dbConnection->prepare($sql);
+        $result = $splitToken->storage->retrieve($selector);
 
-        if (!$statement) {
-            $errorMessage = $splitToken->dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
-            throw InvalidTokenException::pdoStatementError($errorMessage);
-        }
-
-        try {
-            $statement->execute([':selector' => $selector]);
-        } catch (PDOException $e) {
-            throw InvalidTokenException::sqlError($e);
-        }
-
-        /** @var array<string, string|null> */
-        $result = $statement->fetch();
-
-        if (!$result) {
+        if ($result === false) {
             throw InvalidTokenException::selectorError();
         }
 
@@ -308,13 +273,11 @@ final class SplitToken
     /**
      * Check if the token is expired.
      *
-     * @throws SplitTokenException if the expiration time is empty
-     * @return bool                True if the token is expired, false otherwise
-     *
+     * @return bool True if the token is expired, false otherwise
      */
     public function isExpired(): bool
     {
-        return null !== $this->expirationTime && $this->expirationTime <= time();
+        return $this->expirationTime !== null && $this->expirationTime <= time();
     }
 
     /**
@@ -344,36 +307,18 @@ final class SplitToken
      * @throws SplitTokenException   if not enough data are provided
      * @return $this
      *
+     * @psalm-suppress MissingPureAnnotation
      */
     public function persist(): self
     {
-        $sql = sprintf(
-            'INSERT INTO %s (
-                user_id, token_type, selector, verifier, additional_info, expiration_time
-            ) VALUES (
-                :userid, :tokentype, :selector, :verifier, :additional, :expires
-            )',
-            self::TABLE_NAME
+        $this->storage->persist(
+            selector: $this->selector ?? '',
+            hashedVerifier: $this->hashedVerifier ?? '',
+            userId: $this->userId,
+            tokenType: $this->tokenType,
+            additionalInfo: $this->additionalInfo,
+            expirationTime: $this->expirationTime
         );
-        $statement = $this->dbConnection->prepare($sql);
-
-        if (!$statement) {
-            $errorMessage = $this->dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
-            throw InvalidTokenException::pdoStatementError($errorMessage);
-        }
-
-        try {
-            $statement->execute([
-                ':userid' => $this->userId,
-                ':tokentype' => $this->tokenType,
-                ':selector' => $this->selector,
-                ':verifier' => $this->hashedVerifier,
-                ':additional' => $this->additionalInfo,
-                ':expires' => $this->expirationTime,
-            ]);
-        } catch (PDOException $e) {
-            throw InvalidTokenException::sqlError($e);
-        }
 
         return $this;
     }
@@ -385,7 +330,6 @@ final class SplitToken
      *
      * @throws SplitTokenException
      * @return $this
-     *
      */
     public function revokeToken(bool $deleteToken = false): self
     {
@@ -393,38 +337,9 @@ final class SplitToken
         $this->expirationTime = time() - $oneDayInSeconds;
 
         if ($deleteToken) {
-            $statement = $this->dbConnection->prepare(
-                sprintf('DELETE FROM %s WHERE selector = :selector', self::TABLE_NAME)
-            );
-
-            if (!$statement) {
-                $errorMessage = $this->dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
-                throw InvalidTokenException::pdoStatementError($errorMessage);
-            }
-
-            try {
-                $statement->execute([':selector' => $this->selector]);
-            } catch (PDOException $e) {
-                throw InvalidTokenException::sqlError($e);
-            }
+            $this->storage->delete($this->selector ?? '');
         } else {
-            $statement = $this->dbConnection->prepare(
-                sprintf('UPDATE %s SET expiration_time = :expires WHERE selector = :selector', self::TABLE_NAME)
-            );
-
-            if (!$statement) {
-                $errorMessage = $this->dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
-                throw InvalidTokenException::pdoStatementError($errorMessage);
-            }
-
-            try {
-                $statement->execute([
-                    ':expires' => $this->expirationTime,
-                    ':selector' => $this->selector,
-                ]);
-            } catch (PDOException $e) {
-                throw InvalidTokenException::sqlError($e);
-            }
+            $this->storage->updateExpiration($this->selector ?? '', $this->expirationTime);
         }
 
         $this->token = null;
@@ -435,27 +350,16 @@ final class SplitToken
     }
 
     /**
-     * Delete all expired tokens from database.
+     * Delete all expired tokens from storage.
      *
-     * @param PDO $dbConnection Connection to the database
+     * @param TokenStorageInterface $storage Storage backend for token persistence
      *
      * @return int Returns the number of deleted tokens
+     *
+     * @psalm-suppress MissingPureAnnotation
      */
-    public static function clearExpiredTokens(PDO $dbConnection): int
+    public static function clearExpiredTokens(TokenStorageInterface $storage): int
     {
-        $statement = $dbConnection->prepare(sprintf('DELETE FROM %s WHERE expiration_time <= :time', self::TABLE_NAME));
-
-        if (!$statement) {
-            $errorMessage = $dbConnection->errorInfo()[2] ?? 'Unknown PDO error';
-            throw InvalidTokenException::pdoStatementError($errorMessage);
-        }
-
-        try {
-            $statement->execute([':time' => time()]);
-
-            return $statement->rowCount();
-        } catch (PDOException $e) {
-            throw InvalidTokenException::sqlError($e);
-        }
+        return $storage->clearExpired();
     }
 }
