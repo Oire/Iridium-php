@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Oire\Iridium\Key;
 
 use Oire\Iridium\Crypt;
+use SensitiveParameter;
 
 /**
  * Iridium, a security library for hashing passwords, encrypting data and managing secure tokens
@@ -25,25 +26,36 @@ use Oire\Iridium\Crypt;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @psalm-immutable
  */
 final class DerivedKeys
 {
-    public const SALT_SIZE = 32;
+    public const int SALT_SIZE = 32;
 
     /**
-     * This value objects holds the keys derived from the provided shared key.
+     * This value object holds the keys derived from the provided shared key.
      * Class constructor.
      *
      * @param string $salt              The salt for deriving the keys
      * @param string $encryptionKey     the derived encryption key
      * @param string $authenticationKey The derived authentication key
+     *
+     * @psalm-mutation-free
      */
     public function __construct(
+        #[SensitiveParameter]
         private string $salt,
+        #[SensitiveParameter]
         private string $encryptionKey,
+        #[SensitiveParameter]
         private string $authenticationKey
     ) {}
+
+    public function __destruct()
+    {
+        sodium_memzero($this->salt);
+        sodium_memzero($this->encryptionKey);
+        sodium_memzero($this->authenticationKey);
+    }
 
     /** Getters  */
     public function getSalt(): string
@@ -65,10 +77,12 @@ final class DerivedKeys
      * Checks if the derived keys are valid.
      *
      * @return bool Returns true if the keys are valid, false otherwise
+     *
+     * @psalm-mutation-free
      */
     public function areValid(): bool
     {
-        return ($this->salt && $this->encryptionKey && $this->authenticationKey)
+        return ($this->salt !== '' && $this->encryptionKey !== '' && $this->authenticationKey !== '')
             && self::SALT_SIZE === mb_strlen($this->salt, Crypt::STRING_ENCODING_8BIT);
     }
 }

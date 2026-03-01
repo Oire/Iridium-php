@@ -20,7 +20,7 @@ jobs:
         run: docker compose build --build-arg PHP_VERSION=${{ matrix.php }}
 
       - name: Start services
-        run: docker compose up -d
+        run: docker compose up -d --no-deps php
 
       - name: Install dependencies
         run: docker compose exec php composer update --prefer-dist --no-interaction

@@ -9,4 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+RUN git config --global --add safe.directory /app
+
 WORKDIR /app

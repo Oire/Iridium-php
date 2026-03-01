@@ -7,7 +7,9 @@ namespace Oire\Iridium\Tests;
 use DateTimeImmutable;
 use Oire\Iridium\Exception\InvalidTokenException;
 use Oire\Iridium\Exception\SplitTokenException;
+use Oire\Iridium\Key\SharedKey;
 use Oire\Iridium\SplitToken;
+use Oire\Iridium\Storage\PdoTokenStorage;
 use Override;
 use PDO;
 use PHPUnit\Framework\TestCase;
@@ -38,7 +40,18 @@ final class SplitTokenTest extends TestCase
     private const int TEST_USER_ID = 12345;
     private const int TEST_TOKEN_TYPE = 3;
     private const string TEST_ADDITIONAL_INFO = '{"oldEmail":"test@example.com","newEmail":"john.doe@example.com"}';
-    private static ?PDO $db;
+    private const string TEST_KEY = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
+    private static ?PDO $db = null;
+    private static ?PdoTokenStorage $storage = null;
+
+    private static function getStorage(): PdoTokenStorage
+    {
+        if (self::$storage === null) {
+            self::fail('Storage is not initialized.');
+        }
+
+        return self::$storage;
+    }
 
     #[Override]
     public static function setUpBeforeClass(): void
@@ -51,6 +64,7 @@ final class SplitTokenTest extends TestCase
 
         $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $database);
         self::$db = new PDO($dsn, $username, $password);
+        self::$storage = new PdoTokenStorage(self::$db);
 
         $schema = file_get_contents(__DIR__ . '/schema.sql');
         self::$db->exec(sprintf('DROP TABLE IF EXISTS %s', SplitToken::TABLE_NAME));
@@ -58,6 +72,7 @@ final class SplitTokenTest extends TestCase
         self::$db->exec($schema);
     }
 
+    /** @psalm-suppress MissingPureAnnotation */
     #[Override]
     protected function setUp(): void
     {
@@ -69,35 +84,25 @@ final class SplitTokenTest extends TestCase
     #[Override]
     public static function tearDownAfterClass(): void
     {
+        self::$storage = null;
         self::$db = null;
     }
 
-    public function testSetTokenFromsUserProvidedString(): void
+    public function testSetTokenFromUserProvidedString(): void
     {
+        $storage = self::getStorage();
         $expirationTime = (new DateTimeImmutable(SplitToken::DEFAULT_EXPIRATION_TIME_OFFSET))->getTimestamp();
 
-        /** @psalm-suppress PossiblyNullReference */
-        $statement = self::$db->prepare(
-            sprintf(
-                'INSERT INTO %s (
-                    user_id, token_type, selector, verifier, additional_info, expiration_time
-                ) VALUES (
-                    :userid, :tokentype, :selector, :verifier, :additional, :expires
-                )',
-                SplitToken::TABLE_NAME
-            )
+        $storage->persist(
+            self::TEST_SELECTOR,
+            self::TEST_HASHED_VERIFIER,
+            self::TEST_USER_ID,
+            self::TEST_TOKEN_TYPE,
+            self::TEST_ADDITIONAL_INFO,
+            $expirationTime
         );
-        $statement->execute([
-            ':userid' => self::TEST_USER_ID,
-            ':tokentype' => self::TEST_TOKEN_TYPE,
-            ':selector' => self::TEST_SELECTOR,
-            ':verifier' => self::TEST_HASHED_VERIFIER,
-            ':additional' => self::TEST_ADDITIONAL_INFO,
-            ':expires' => $expirationTime,
-        ]);
 
-        /** @psalm-suppress PossiblyNullArgument */
-        $splittoken = SplitToken::fromString(self::TEST_TOKEN, self::$db);
+        $splittoken = SplitToken::fromString(self::TEST_TOKEN, $storage);
 
         self::assertSame(self::TEST_TOKEN, $splittoken->getToken());
         self::assertSame(self::TEST_USER_ID, $splittoken->getUserId());
@@ -108,10 +113,10 @@ final class SplitTokenTest extends TestCase
 
     public function testCreateToken(): void
     {
+        $storage = self::getStorage();
         $expirationTime = time() + 10800;
-        /** @psalm-suppress PossiblyNullArgument */
         $startSplitToken = SplitToken::create(
-            dbConnection: self::$db,
+            storage: $storage,
             expirationTime: $expirationTime,
             userId: self::TEST_USER_ID,
             tokenType: null,
@@ -121,7 +126,7 @@ final class SplitTokenTest extends TestCase
         $token = $startSplitToken->getToken();
 
         /** @psalm-suppress PossiblyNullArgument */
-        $splittoken = SplitToken::fromString($token, self::$db);
+        $splittoken = SplitToken::fromString($token, $storage);
 
         self::assertSame($token, $splittoken->getToken());
         self::assertSame(self::TEST_USER_ID, $splittoken->getUserId());
@@ -133,10 +138,11 @@ final class SplitTokenTest extends TestCase
 
     public function testCreateEternalToken(): void
     {
-        /** @psalm-suppress PossiblyNullArgument */
-        $startSplittoken = SplitToken::create(self::$db, null)->persist();
+        $storage = self::getStorage();
+        $startSplittoken = SplitToken::create($storage, null)->persist();
         $token = $startSplittoken->getToken();
-        $splittoken = SplitToken::fromString($token, self::$db);
+        /** @psalm-suppress PossiblyNullArgument */
+        $splittoken = SplitToken::fromString($token, $storage);
 
         self::assertSame($token, $splittoken->getToken());
         self::assertNull($splittoken->getUserId());
@@ -148,11 +154,11 @@ final class SplitTokenTest extends TestCase
 
     public function testSetDefaultExpirationTime(): void
     {
-        /** @psalm-suppress PossiblyNullArgument */
-        $startSplitToken = SplitToken::create(self::$db)->persist();
+        $storage = self::getStorage();
+        $startSplitToken = SplitToken::create($storage)->persist();
         $token = $startSplitToken->getToken();
         /** @psalm-suppress PossiblyNullArgument */
-        $splitToken = SplitToken::fromString($token, self::$db);
+        $splitToken = SplitToken::fromString($token, $storage);
 
         self::assertSame($token, $splitToken->getToken());
         self::assertNotNull($splitToken->getExpirationTime());
@@ -163,9 +169,9 @@ final class SplitTokenTest extends TestCase
 
     public function testRevokeToken(): void
     {
-        /** @psalm-suppress PossiblyNullArgument */
+        $storage = self::getStorage();
         $startSplittoken = SplitToken::create(
-            dbConnection: self::$db,
+            storage: $storage,
             expirationTime: time() + 3600,
             userId: self::TEST_USER_ID,
             tokenType: self::TEST_TOKEN_TYPE
@@ -173,7 +179,8 @@ final class SplitTokenTest extends TestCase
             ->persist();
         $token = $startSplittoken->getToken();
 
-        $splittoken = SplitToken::fromString($token, self::$db);
+        /** @psalm-suppress PossiblyNullArgument */
+        $splittoken = SplitToken::fromString($token, $storage);
 
         self::assertSame($token, $splittoken->getToken());
         self::assertFalse($splittoken->isExpired());
@@ -184,9 +191,9 @@ final class SplitTokenTest extends TestCase
 
     public function testRevokeEternalToken(): void
     {
-        /** @psalm-suppress PossiblyNullArgument */
+        $storage = self::getStorage();
         $startSplittoken = SplitToken::create(
-            dbConnection: self::$db,
+            storage: $storage,
             expirationTime: null,
             userId: self::TEST_USER_ID,
             tokenType: self::TEST_TOKEN_TYPE
@@ -195,7 +202,7 @@ final class SplitTokenTest extends TestCase
         $token = $startSplittoken->getToken();
 
         /** @psalm-suppress PossiblyNullArgument */
-        $splitToken = SplitToken::fromString($token, self::$db);
+        $splitToken = SplitToken::fromString($token, $storage);
 
         self::assertSame($token, $splitToken->getToken());
         self::assertFalse($splitToken->isExpired(), 'the token should not be expired as the time is null');
@@ -210,35 +217,85 @@ final class SplitTokenTest extends TestCase
 
     public function testClearExpiredTokens(): void
     {
-        /** @psalm-suppress PossiblyNullArgument */
-        $splitToken1 = SplitToken::create(self::$db, time() + 3600, 1)->persist();
-        /** @psalm-suppress PossiblyNullArgument */
-        $splitToken2 = SplitToken::create(self::$db, time() + 3660, 2)->persist();
-        /** @psalm-suppress PossiblyNullArgument */
-        $splitToken3 = SplitToken::create(self::$db, time() + 3720, 3)->persist();
+        $storage = self::getStorage();
+        $splitToken1 = SplitToken::create($storage, time() + 3600, 1)->persist();
+        $splitToken2 = SplitToken::create($storage, time() + 3660, 2)->persist();
+        $splitToken3 = SplitToken::create($storage, time() + 3720, 3)->persist();
 
         $splitToken1->revokeToken();
         $splitToken2->revokeToken();
         $splitToken3->revokeToken(true);
 
-        self::assertSame(2, SplitToken::clearExpiredTokens(self::$db));
+        self::assertSame(2, SplitToken::clearExpiredTokens($storage));
     }
 
     public function testTryPersistWithInvalidUserId(): void
     {
+        $storage = self::getStorage();
+
         self::expectException(SplitTokenException::class);
         self::expectExceptionMessage('Invalid user ID');
 
-        /** @psalm-suppress PossiblyNullArgument */
-        SplitToken::create(self::$db, time() + 3600, -3)->persist();
+        SplitToken::create($storage, time() + 3600, -3)->persist();
     }
 
     public function testInvalidTokenLength(): void
     {
+        $storage = self::getStorage();
+
         self::expectException(InvalidTokenException::class);
         self::expectExceptionMessage('Invalid token length');
 
+        SplitToken::fromString('abc', $storage);
+    }
+
+    public function testGetExpirationDate(): void
+    {
+        $storage = self::getStorage();
+        $splitToken = SplitToken::create($storage, time() + 3600)->persist();
+
+        $date = $splitToken->getExpirationDate();
+        self::assertInstanceOf(DateTimeImmutable::class, $date);
+    }
+
+    public function testGetExpirationDateFormatted(): void
+    {
+        $storage = self::getStorage();
+        $splitToken = SplitToken::create($storage, time() + 3600)->persist();
+
+        $formatted = $splitToken->getExpirationDateFormatted();
+        self::assertNotNull($formatted);
+        self::assertMatchesRegularExpression('/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/', $formatted);
+    }
+
+    public function testEncryptedAdditionalInfo(): void
+    {
+        $storage = self::getStorage();
+        $key = new SharedKey(self::TEST_KEY);
+
+        $startToken = SplitToken::create(
+            storage: $storage,
+            expirationTime: time() + 3600,
+            userId: self::TEST_USER_ID,
+            additionalInfo: self::TEST_ADDITIONAL_INFO,
+            additionalInfoKey: $key
+        )
+            ->persist();
+
+        $token = $startToken->getToken();
         /** @psalm-suppress PossiblyNullArgument */
-        SplitToken::fromString('abc', self::$db);
+        $splitToken = SplitToken::fromString($token, $storage, $key);
+
+        self::assertSame(self::TEST_ADDITIONAL_INFO, $splitToken->getAdditionalInfo());
+    }
+
+    public function testStringExpirationTime(): void
+    {
+        $storage = self::getStorage();
+        $splitToken = SplitToken::create($storage, '+2 hours')->persist();
+
+        self::assertNotNull($splitToken->getExpirationTime());
+        self::assertGreaterThan(time() + 3600, $splitToken->getExpirationTime());
+        self::assertFalse($splitToken->isExpired());
     }
 }

@@ -66,4 +66,36 @@ final class SharedKeyTest extends TestCase
 
         new SharedKey('abc');
     }
+
+    public function testToString(): void
+    {
+        $sharedKey = new SharedKey(self::TEST_KEY);
+
+        self::assertSame($sharedKey->getKey(), (string) $sharedKey);
+    }
+
+    public function testCreateFactoryMethod(): void
+    {
+        $randomKey = SharedKey::create();
+        self::assertSame(SharedKey::KEY_SIZE, mb_strlen($randomKey->getRawKey(), Crypt::STRING_ENCODING_8BIT));
+
+        $knownKey = SharedKey::create(self::TEST_KEY);
+        self::assertSame(self::TEST_KEY, $knownKey->getKey());
+    }
+
+    public function testDeriveKeysWithInvalidSaltLengthThrows(): void
+    {
+        $sharedKey = new SharedKey();
+
+        $this->expectException(SharedKeyException::class);
+
+        $sharedKey->deriveKeys('short');
+    }
+
+    public function testDerivedKeysAreValidReturnsFalse(): void
+    {
+        $derivedKeys = new DerivedKeys('', '', '');
+
+        self::assertFalse($derivedKeys->areValid());
+    }
 }

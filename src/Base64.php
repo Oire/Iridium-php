@@ -28,10 +28,10 @@ use Oire\Iridium\Exception\Base64Exception;
  */
 final class Base64
 {
-    private const WHAT = '+/'; // Characters to be replaced
-    private const WITH = '-_'; // Characters to replace with
-    private const EXT_WHAT = '+/='; // With equals signs
-    private const EXT_WITH = '-_~';
+    private const string WHAT = '+/'; // Characters to be replaced
+    private const string WITH = '-_'; // Characters to replace with
+    private const string EXT_WHAT = '+/='; // With equals signs
+    private const string EXT_WITH = '-_~';
 
     /**
      * Encode into URL-safe Base64.
@@ -39,8 +39,7 @@ final class Base64
      * @param string $data            The data to be encoded
      * @param bool   $preservePadding If true, replaces ='s with ~'s. If false (default), truncates padding
      *
-     * @throws Base64Exception if encoding to base64 fails
-     * @return string          The encoded data
+     * @return string The encoded data
      *
      * @psalm-pure
      */
@@ -65,7 +64,7 @@ final class Base64
      */
     public static function decode(string $data): string
     {
-        $decoded = base64_decode(strtr($data, self::WITH, self::WHAT), true);
+        $decoded = base64_decode(strtr($data, self::EXT_WITH, self::EXT_WHAT), true);
 
         if ($decoded === false) {
             throw new Base64Exception('Unable to decode from base64.');

@@ -62,4 +62,13 @@ final class Base64Test extends TestCase
 
         Base64::decode(random_bytes(32));
     }
+
+    public function testDecodeWithTildePaddedInput(): void
+    {
+        $encoded = Base64::encode(self::RAW_DATA, true);
+        self::assertStringContainsString('~', $encoded);
+
+        $decoded = Base64::decode($encoded);
+        self::assertSame(self::RAW_DATA, $decoded);
+    }
 }
