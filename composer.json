@@ -18,12 +18,12 @@
         "psalm/plugin-phpunit": "*",
         "vimeo/psalm": "dev-master"
     },
-    "license": "MIT",
+    "license": "Apache-2.0",
     "authors": [
         {
-            "name": "André Polykanine also known as Menelion Elensúlë",
+            "name": "André Polykanine",
             "email": "ap@oire.me",
-            "homepage": "https://github.com/Menelion",
+            "homepage": "https://oire.org/",
             "role": "developer"
         }
     ],
