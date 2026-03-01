@@ -28,7 +28,7 @@ use PHPUnit\Framework\TestCase;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-class PasswordTest extends TestCase
+final class PasswordTest extends TestCase
 {
     private const string CORRECT_PASSWORD = '4024Alohomora02*X%cZ/R&D';
     private const string WRONG_PASSWORD = '12345Alohomora02*X%cZ/r&d';

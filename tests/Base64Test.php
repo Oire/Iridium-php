@@ -26,7 +26,7 @@ use PHPUnit\Framework\TestCase;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-class Base64Test extends TestCase
+final class Base64Test extends TestCase
 {
     private const string RAW_DATA = 'The quick brown fox jumps over the lazy dog';
     private const string ENCODED_DATA = 'VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw==';

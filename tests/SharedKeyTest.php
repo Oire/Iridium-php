@@ -26,7 +26,7 @@ use PHPUnit\Framework\TestCase;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-class SharedKeyTest extends TestCase
+final class SharedKeyTest extends TestCase
 {
     // Oire\Iridium\Base64::encode(hex2bin('000102030405060708090a0b0c0d0e0f'));
     private const string TEST_KEY = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';

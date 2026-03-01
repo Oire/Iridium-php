@@ -6,6 +6,7 @@ namespace Oire\Iridium\Tests;
 
 use DateTimeImmutable;
 use Oire\Iridium\Exception\InvalidTokenException;
+use Override;
 use Oire\Iridium\Exception\SplitTokenException;
 use Oire\Iridium\SplitToken;
 use PDO;
@@ -27,7 +28,7 @@ use PHPUnit\Framework\TestCase;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-class SplitTokenTest extends TestCase
+final class SplitTokenTest extends TestCase
 {
     // Oire\Iridium\Base64::encode(hex2bin('0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324'));
     private const string TEST_TOKEN = 'AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMk';
@@ -50,12 +51,14 @@ class SplitTokenTest extends TestCase
         SQL;
     private static ?PDO $db;
 
+    #[Override]
     public static function setUpBeforeClass(): void
     {
         self::$db = new PDO('sqlite::memory:');
         self::$db->query(sprintf(self::CREATE_TABLE_SQL, SplitToken::TABLE_NAME));
     }
 
+    #[Override]
     public static function tearDownAfterClass(): void
     {
         self::$db = null;
