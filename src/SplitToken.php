@@ -255,6 +255,8 @@ final class SplitToken
      * Check if the token is eternal, i.e., never expires.
      *
      * @return bool True if the token never expires, false otherwise or if the token was revoked
+     *
+     * @psalm-mutation-free
      */
     public function isEternal(): bool
     {

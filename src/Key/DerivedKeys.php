@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Oire\Iridium\Key;
 
 use Oire\Iridium\Crypt;
@@ -22,6 +24,8 @@ use Oire\Iridium\Crypt;
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * @psalm-immutable
  */
 final class DerivedKeys
 {

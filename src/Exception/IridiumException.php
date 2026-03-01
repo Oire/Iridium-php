@@ -25,6 +25,7 @@ use Throwable;
  */
 class IridiumException extends RuntimeException
 {
+    /** @psalm-mutation-free */
     final public function __construct(string $message, ?Throwable $previous = null)
     {
         parent::__construct($message, 0, $previous);

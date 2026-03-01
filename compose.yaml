@@ -1,0 +1,30 @@
+services:
+  php:
+    build:
+      context: .
+      args:
+        PHP_VERSION: ${PHP_VERSION:-8.3}
+    volumes:
+      - .:/app
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_DATABASE: iridium_test
+      DB_USERNAME: iridium
+      DB_PASSWORD: iridium_secret
+
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: root_secret
+      MARIADB_DATABASE: iridium_test
+      MARIADB_USER: iridium
+      MARIADB_PASSWORD: iridium_secret
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
