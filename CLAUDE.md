@@ -6,21 +6,30 @@ Iridium is a security library for PHP providing authenticated encryption, passwo
 
 ## Quick Reference
 
+Local development uses Docker Compose (FrankenPHP + MariaDB).
+
 ```bash
+# Build and start containers
+docker compose build
+docker compose up -d
+
 # Install dependencies
-composer install
+docker compose exec php composer install
 
 # Run tests
-./vendor/bin/phpunit
+docker compose exec php vendor/bin/phpunit
 
 # Static analysis (strictest level)
-./vendor/bin/psalm
+docker compose exec php vendor/bin/psalm
 
 # Code style check
-./vendor/bin/php-cs-fixer fix --diff --dry-run
+docker compose exec php vendor/bin/php-cs-fixer fix --diff --dry-run
 
 # Code style fix
-./vendor/bin/php-cs-fixer fix
+docker compose exec php vendor/bin/php-cs-fixer fix
+
+# Stop containers
+docker compose down
 ```
 
 Always run all three checks before committing.
@@ -43,7 +52,7 @@ tests/
 
 ## Coding Conventions
 
-- **PHP 8.3+** required. Extensions: PDO, Mbstring, OpenSSL.
+- **PHP 8.3+** required. Extensions: PDO, pdo_mysql, Mbstring, OpenSSL.
 - **`declare(strict_types=1);`** in every PHP file.
 - **All classes are `final`** except base exception classes.
 - **Namespace**: `Oire\Iridium\` (PSR-4 mapped to `src/`). Tests: `Oire\Iridium\Tests\`.
@@ -62,8 +71,8 @@ tests/
 ## Testing
 
 - PHPUnit with test suite named "Colloportus" (see `phpunit.xml.dist`).
-- Tests use SQLite in-memory databases for `SplitToken` persistence tests.
-- CI runs on PHP 8.3 and 8.4, both Ubuntu and Windows.
+- Tests use MariaDB via Docker Compose for `SplitToken` persistence tests.
+- CI runs on PHP 8.3, 8.4, and 8.5 on Ubuntu via Docker.
 
 ## Static Analysis
 
@@ -73,9 +82,9 @@ tests/
 
 ## CI Pipelines (GitHub Actions)
 
-1. **run-tests.yml** - PHPUnit on PHP 8.3/8.4, Ubuntu + Windows.
-2. **psalm.yml** - Static analysis on PHP 8.3/8.4.
-3. **php-cs-fixer.yml** - Code style check (dry-run) on PHP 8.3.
+1. **run-tests.yml** - PHPUnit on PHP 8.3/8.4/8.5 via Docker Compose.
+2. **psalm.yml** - Static analysis on PHP 8.3/8.4/8.5 via Docker Compose.
+3. **php-cs-fixer.yml** - Code style check (dry-run) on PHP 8.3 via Docker Compose.
 
 ## Security Considerations
 

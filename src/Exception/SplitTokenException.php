@@ -22,19 +22,28 @@ namespace Oire\Iridium\Exception;
  */
 class SplitTokenException extends IridiumException
 {
-    /** @psalm-suppress PossiblyUnusedReturnValue */
+    /**
+     * @psalm-pure
+     * @psalm-suppress PossiblyUnusedReturnValue
+     */
     public static function invalidUserId(int $userId = 0): self
     {
         return new self(sprintf('Invalid user ID. Should be a positive integer, %d given.', $userId));
     }
 
-    /** @psalm-suppress PossiblyUnusedReturnValue */
+    /**
+     * @psalm-mutation-free
+     * @psalm-suppress PossiblyUnusedReturnValue
+     */
     public static function additionalInfoEncryptionError(CryptException $e): self
     {
         return new self(sprintf('Unable to encrypt additional info: %s.', $e->getMessage()), $e);
     }
 
-    /** @psalm-suppress PossiblyUnusedReturnValue */
+    /**
+     * @psalm-mutation-free
+     * @psalm-suppress PossiblyUnusedReturnValue
+     */
     public static function additionalInfoDecryptionError(CryptException $e): self
     {
         return new self(sprintf('Unable to decrypt additional info: %s.', $e->getMessage()), $e);

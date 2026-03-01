@@ -10,7 +10,9 @@ This library consists of several classes, or modules, and can be used for hashin
 
 ## Requirements
 
-Requires PHP 8.3 or later with _PDO_, _Mbstring_ and _OpenSSL_ enabled.
+Requires PHP 8.3 or later with _PDO_, _pdo_mysql_, _Mbstring_ and _OpenSSL_ enabled.
+
+For local development, [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/) are used to provide a FrankenPHP + MariaDB environment.
 
 ## Installation
 
@@ -22,11 +24,18 @@ composer require oire/iridium
 
 ## Running Tests
 
-Run `./vendor/bin/phpunit` in the project directory.
+```shell
+docker compose build
+docker compose up -d
+docker compose exec php composer install
+docker compose exec php vendor/bin/phpunit
+```
 
 ## Running Psalm Analysis
 
-Run `./vendor/bin/psalm` in the project directory.
+```shell
+docker compose exec php vendor/bin/psalm
+```
 
 ## 🖇 Base64 Handling, URL-safe Way
 
@@ -230,27 +239,21 @@ Support for popular ORMs is planned for a future version.
 
 #### Create a Table
 
-Iridium tries to be as database agnostic as possible (MySQL and SQLite were tested, the latter actually powers the tests).  
-First you need to create the `iridium_tokens` table. For mySQL the statement is as follows:
+First you need to create the `iridium_tokens` table. For MySQL/MariaDB the statement is as follows:
 
 ```sql
-CREATE TABLE `iridium_tokens` (
-    `id` INT UNSIGNED NULL AUTO_INCREMENT PRIMARY KEY,
-    `user_id` INT UNSIGNED NULL,
-    `token_type` TINYINT UNSIGNED NULL ,
-    `selector` VARCHAR(25) NOT NULL,
-    `verifier` VARCHAR(70) NOT NULL,
-    `additional_info` TEXT NULL,
-    `expires_at` BIGINT(20) UNSIGNED NULL,
-    CONSTRAINT `fk_iridium_token_user`
-        FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-        ON UPDATE RESTRICT
-        ON DELETE CASCADE
-) ENGINE = InnoDB;
+CREATE TABLE IF NOT EXISTS iridium_tokens (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    token_type INT,
+    selector VARCHAR(255) NOT NULL UNIQUE,
+    verifier VARCHAR(255) NOT NULL UNIQUE,
+    additional_info TEXT,
+    expiration_time BIGINT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
-You may need to adjust the syntax to suit your particular database driver (see for example the SQLite statement in the tests), as well as the name of your `users` table.  
-The field lengths are optimal. Please remember though, that you need to adjust the length and sign (`UNSIGNED` or not) of the `user_id` field in the `FOREIGN KEY` constraint, otherwise you’ll get very cryptic errors from MySQL or MariaDB.
+You may need to adjust the syntax to suit your particular database driver, as well as add foreign key constraints to match your `users` table.
 
 #### Create a Token
 
@@ -364,17 +367,21 @@ See [changelog](https://github.com/Oire/Iridium-php/blob/master/CHANGELOG.md).
 
 ## Contributing
 
-All contributions are welcome. Please fork, make a feature branch, do `composer install`, hack on the code, commit, push your branch and send a pull request.
+All contributions are welcome. Please fork, make a feature branch, hack on the code, commit, push your branch and send a pull request.
 
 Before committing, don’t forget to run all the needed checks, otherwise the CI will complain afterwards:
 
 ```shell
-./vendor/bin/phpunit
-./vendor/bin/psalm
-./vendor/bin/php-cs-fixer fix
+docker compose build
+docker compose up -d
+docker compose exec php composer install
+docker compose exec php vendor/bin/phpunit
+docker compose exec php vendor/bin/psalm
+docker compose exec php vendor/bin/php-cs-fixer fix
+docker compose down
 ```
 
-If PHPCodeSniffer finds any code style errors, fix them in your code.  
+If PHP CS Fixer finds any code style errors, fix them in your code.
 When your pull request is submitted, make sure all checks passed on CI.
 
 ## License

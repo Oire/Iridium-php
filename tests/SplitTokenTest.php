@@ -6,9 +6,9 @@ namespace Oire\Iridium\Tests;
 
 use DateTimeImmutable;
 use Oire\Iridium\Exception\InvalidTokenException;
-use Override;
 use Oire\Iridium\Exception\SplitTokenException;
 use Oire\Iridium\SplitToken;
+use Override;
 use PDO;
 use PHPUnit\Framework\TestCase;
 
@@ -38,26 +38,34 @@ final class SplitTokenTest extends TestCase
     private const int TEST_USER_ID = 12345;
     private const int TEST_TOKEN_TYPE = 3;
     private const string TEST_ADDITIONAL_INFO = '{"oldEmail":"test@example.com","newEmail":"john.doe@example.com"}';
-    private const string CREATE_TABLE_SQL = <<<'SQL'
-            CREATE TABLE %s (
-                id INTEGER NOT NULL PRIMARY KEY,
-                user_id INTEGER,
-                token_type INTEGER,
-                selector TEXT NOT NULL UNIQUE,
-                verifier TEXT NOT NULL UNIQUE,
-                additional_info TEXT,
-                expiration_time BIGINT
-            );
-        SQL;
     private static ?PDO $db;
 
     #[Override]
     public static function setUpBeforeClass(): void
     {
-        self::$db = new PDO('sqlite::memory:');
-        self::$db->query(sprintf(self::CREATE_TABLE_SQL, SplitToken::TABLE_NAME));
+        $host = $_ENV['DB_HOST'] ?? 'mariadb';
+        $port = $_ENV['DB_PORT'] ?? '3306';
+        $database = $_ENV['DB_DATABASE'] ?? 'iridium_test';
+        $username = $_ENV['DB_USERNAME'] ?? 'iridium';
+        $password = $_ENV['DB_PASSWORD'] ?? 'iridium_secret';
+
+        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $database);
+        self::$db = new PDO($dsn, $username, $password);
+
+        $schema = file_get_contents(__DIR__ . '/schema.sql');
+        self::$db->exec(sprintf('DROP TABLE IF EXISTS %s', SplitToken::TABLE_NAME));
+        /** @psalm-suppress PossiblyFalseArgument */
+        self::$db->exec($schema);
     }
 
+    #[Override]
+    protected function setUp(): void
+    {
+        /** @psalm-suppress PossiblyNullReference */
+        self::$db->exec(sprintf('TRUNCATE TABLE %s', SplitToken::TABLE_NAME));
+    }
+
+    /** @psalm-suppress MissingPureAnnotation */
     #[Override]
     public static function tearDownAfterClass(): void
     {
@@ -202,10 +210,11 @@ final class SplitTokenTest extends TestCase
 
     public function testClearExpiredTokens(): void
     {
-        /** @psalm-suppress PossiblyNullReference */
-        self::$db->query(sprintf('DELETE FROM %s', SplitToken::TABLE_NAME));
+        /** @psalm-suppress PossiblyNullArgument */
         $splitToken1 = SplitToken::create(self::$db, time() + 3600, 1)->persist();
+        /** @psalm-suppress PossiblyNullArgument */
         $splitToken2 = SplitToken::create(self::$db, time() + 3660, 2)->persist();
+        /** @psalm-suppress PossiblyNullArgument */
         $splitToken3 = SplitToken::create(self::$db, time() + 3720, 3)->persist();
 
         $splitToken1->revokeToken();

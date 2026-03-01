@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Oire\Iridium;
 
 use Oire\Iridium\Exception\Base64Exception;
@@ -21,6 +23,8 @@ use Oire\Iridium\Exception\Base64Exception;
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * @psalm-pure
  */
 final class Base64
 {
@@ -38,6 +42,7 @@ final class Base64
      * @throws Base64Exception if encoding to base64 fails
      * @return string          The encoded data
      *
+     * @psalm-pure
      */
     public static function encode(string $data, bool $preservePadding = false): string
     {
@@ -56,6 +61,7 @@ final class Base64
      * @throws Base64Exception if decoding from Base64 fails
      * @return string          Returns decoded data
      *
+     * @psalm-pure
      */
     public static function decode(string $data): string
     {

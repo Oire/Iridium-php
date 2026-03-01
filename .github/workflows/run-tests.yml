@@ -4,29 +4,30 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        php: [8.3, 8.4]
-        stability: [prefer-lowest, prefer-stable]
+        php: ['8.3', '8.4', '8.5']
 
-    name: P${{ matrix.php }} - ${{ matrix.stability }} - ${{ matrix.os }}
+    name: P${{ matrix.php }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          extensions: mbstring, pdo, pdo_sqlite, openssl
-          coverage: none
+      - name: Build containers
+        run: docker compose build --build-arg PHP_VERSION=${{ matrix.php }}
+
+      - name: Start services
+        run: docker compose up -d
 
       - name: Install dependencies
-        run: composer install
+        run: docker compose exec php composer update --prefer-dist --no-interaction
 
       - name: Execute tests
-        run: vendor/bin/phpunit
+        run: docker compose exec php vendor/bin/phpunit
+
+      - name: Stop services
+        if: always()
+        run: docker compose down
