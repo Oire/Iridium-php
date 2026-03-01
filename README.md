@@ -1,7 +1,7 @@
 # Iridium, a Security Library for Encrypting Data, Hashing Passwords and Managing Secure Tokens
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/Oire/Iridium.svg?style=flat-square)](https://packagist.org/packages/Oire/Iridium)
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Oire/Iridium-php/blob/master/LICENSE)
+[![Apache-2.0 License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/Oire/Iridium-php/blob/master/LICENSE)
 [![Psalm coverage](https://shepherd.dev/github/Oire/Iridium-php/coverage.svg?)
 [![Psalm level](https://shepherd.dev/github/Oire/Iridium-php/level.svg?)](https://psalm.dev/)
 
@@ -10,7 +10,7 @@ This library consists of several classes, or modules, and can be used for hashin
 
 ## Requirements
 
-Requires PHP 8.1 or later with _PDO_, _Mbstring_ and _OpenSSL_ enabled.
+Requires PHP 8.3 or later with _PDO_, _Mbstring_ and _OpenSSL_ enabled.
 
 ## Installation
 
@@ -379,5 +379,5 @@ When your pull request is submitted, make sure all checks passed on CI.
 
 ## License
 
-Copyright © 2021-2025 André Polykanine also known as Menelion Elensúlë, [Oire Software](https://github.com/Oire/).  
-This software is licensed under an MIT license.
+Copyright © 2021-2026 André Polykanine, [Oire Software](https://oire.org/).
+This software is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
