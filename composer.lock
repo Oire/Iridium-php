@@ -6389,7 +6389,7 @@
         "oire/php-code-style": 20,
         "vimeo/psalm": 20
     },
-    "prefer-stable": true,
+    "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
         "php": ">=8.3"

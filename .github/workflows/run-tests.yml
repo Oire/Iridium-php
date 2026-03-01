@@ -9,9 +9,8 @@ jobs:
       fail-fast: true
       matrix:
         php: ['8.3', '8.4', '8.5']
-        stability: [prefer-lowest, prefer-stable]
 
-    name: P${{ matrix.php }} - ${{ matrix.stability }}
+    name: P${{ matrix.php }}
 
     steps:
       - name: Checkout code
@@ -24,7 +23,7 @@ jobs:
         run: docker compose up -d
 
       - name: Install dependencies
-        run: docker compose exec php composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+        run: docker compose exec php composer update --prefer-dist --no-interaction
 
       - name: Execute tests
         run: docker compose exec php vendor/bin/phpunit
