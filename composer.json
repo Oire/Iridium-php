@@ -56,12 +56,16 @@
     },
     "funding": [
         {
-            "type": "PayPal",
-            "url": "https://paypal.me/MenelionFr"
+            "type": "github",
+            "url": "https://github.com/sponsors/Oire"
         },
         {
             "type": "Ko-fi",
-            "url": "https://ko-fi/Menelion"
+            "url": "https://ko-fi.com/oire"
+        },
+        {
+            "type": "paypal",
+            "url": "https://www.paypal.com/donate/?hosted_button_id=D9GB6MGF8BHH8"
         }
     ]
 }
