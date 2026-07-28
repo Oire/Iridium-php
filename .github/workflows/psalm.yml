@@ -26,8 +26,14 @@ jobs:
       - name: Start services
         run: docker compose up -d --no-deps php
 
+      # `composer install`, not `update`: the analyzer is pinned to `dev-master`, so `update` runs
+      # whatever that branch happens to be today. On 2026-07-28 that was a Psalm build which creates
+      # a dynamic property on its own StatementsAnalyzer, and Psalm's error handler turns the
+      # resulting PHP deprecation into a fatal — every job crashed on the first file analyzed,
+      # regardless of what the pull request changed. Static analysis should be reproducible anyway:
+      # a green run today should stay green tomorrow unless this repository changes.
       - name: Install dependencies
-        run: docker compose exec php composer update --prefer-dist --no-interaction
+        run: docker compose exec php composer install --prefer-dist --no-interaction
 
       - name: Run Psalm
         run: docker compose exec php vendor/bin/psalm
