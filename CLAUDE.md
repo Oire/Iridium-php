@@ -47,8 +47,11 @@ src/
     SharedKey.php     # 32-byte shared encryption key wrapper
     DerivedKeys.php   # Derived encryption + authentication keys via HKDF
   Storage/
-    TokenStorageInterface.php  # Interface for token persistence backends
-    PdoTokenStorage.php        # PDO (MySQL/MariaDB) implementation
+    TokenStorageInterface.php          # Interface for token persistence backends
+    ListableTokenStorageInterface.php  # Optional extension: listing, usage tracking, cutoff sweeps
+    StoredToken.php                    # Readonly value object for one persisted token row
+    PdoTokenStorage.php                # PDO (MySQL/MariaDB) implementation
+    DoctrineDbalTokenStorage.php       # Doctrine DBAL implementation (dbal is a dev/suggest dep)
 tests/
   *Test.php           # One test class per source module
 ```
@@ -97,5 +100,8 @@ This is a cryptographic library. When making changes:
 - Preserve constant-time comparisons (`hash_equals()`). Never replace with `===`.
 - Crypt v2 uses AES-256-GCM (AEAD). Legacy v1 (AES-256-CTR + HMAC-SHA384, encrypt-then-MAC) is preserved for backward-compatible decryption.
 - Keep the split token pattern intact: selector (plaintext lookup) + verifier (hashed comparison).
+- `SplitToken::fromString()` rejects expired and revoked tokens by default, and revocation is stored
+  as an expiration in the past. Do not weaken that back into an opt-in check: before v3.1 the
+  default outcome was that a revoked token authenticated.
 - Key material is zeroed via `sodium_memzero()` in destructors. Do not make key properties `readonly`.
 - Do not introduce timing side channels.

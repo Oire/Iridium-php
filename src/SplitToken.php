@@ -11,6 +11,7 @@ use Oire\Iridium\Exception\CryptException;
 use Oire\Iridium\Exception\InvalidTokenException;
 use Oire\Iridium\Exception\SplitTokenException;
 use Oire\Iridium\Key\SharedKey;
+use Oire\Iridium\Storage\ListableTokenStorageInterface;
 use Oire\Iridium\Storage\TokenStorageInterface;
 use Throwable;
 
@@ -39,6 +40,17 @@ final class SplitToken
     public const string TABLE_NAME = 'iridium_tokens';
     public const string DEFAULT_EXPIRATION_DATE_FORMAT = 'Y-m-d H:i:s';
     public const string DEFAULT_EXPIRATION_TIME_OFFSET = '+1 hour';
+
+    /**
+     * Pass this as `$expirationTime` to get the default expiration, i.e., one hour from now.
+     * It is the default value, and it is *not* the same as `null`, which means the token never
+     * expires. Spelling it out beats the bare `0`, which reads like "no expiration" and silently
+     * gives you an hour instead.
+     */
+    public const int EXPIRATION_DEFAULT = 0;
+
+    /** How far into the past a revoked token's expiration is set. */
+    public const int REVOCATION_TIME_OFFSET = 86400;
     private const int TOKEN_SIZE = 36;
     private const int SELECTOR_SIZE = 16;
     private const int VERIFIER_SIZE = 20;
@@ -79,7 +91,7 @@ final class SplitToken
      */
     public static function create(
         TokenStorageInterface $storage,
-        int|string|null $expirationTime = 0,
+        int|string|null $expirationTime = self::EXPIRATION_DEFAULT,
         ?int $userId = null,
         ?int $tokenType = null,
         ?string $additionalInfo = null,
@@ -99,7 +111,9 @@ final class SplitToken
 
         $splitToken->expirationTime = is_string($expirationTime)
             ? (new DateTimeImmutable($expirationTime))->getTimestamp()
-            : ($expirationTime === 0 ? (new DateTimeImmutable(self::DEFAULT_EXPIRATION_TIME_OFFSET))->getTimestamp() : $expirationTime);
+            : ($expirationTime === self::EXPIRATION_DEFAULT
+                ? (new DateTimeImmutable(self::DEFAULT_EXPIRATION_TIME_OFFSET))->getTimestamp()
+                : $expirationTime);
 
         if ($userId !== null && $userId <= 0) {
             throw SplitTokenException::invalidUserId($userId);
@@ -134,14 +148,24 @@ final class SplitToken
     /**
      * Set and validate a user-provided token.
      *
+     * An expired token is rejected, and so is a revoked one, because revocation is stored as an
+     * expiration in the past. Pass `$allowExpired = true` only when you want the object in order to
+     * *report* on it — to tell a user when their password reset link died, say — never to
+     * authenticate with it.
+     *
      * @param string                $token             The token provided by the user
      * @param TokenStorageInterface $storage           Storage backend for token persistence
      * @param SharedKey|null        $additionalInfoKey If not empty, the encrypted additional info will be decrypted
+     * @param bool                  $allowExpired      Return expired and revoked tokens instead of rejecting them
      *
      * @throws InvalidTokenException
      */
-    public static function fromString(string $token, TokenStorageInterface $storage, ?SharedKey $additionalInfoKey = null): self
-    {
+    public static function fromString(
+        string $token,
+        TokenStorageInterface $storage,
+        ?SharedKey $additionalInfoKey = null,
+        bool $allowExpired = false
+    ): self {
         $splitToken = new self($storage);
 
         try {
@@ -195,7 +219,24 @@ final class SplitToken
             $splitToken->additionalInfo = null;
         }
 
+        if (!$allowExpired && $splitToken->isExpired()) {
+            throw InvalidTokenException::tokenExpired();
+        }
+
         return $splitToken;
+    }
+
+    /**
+     * Get the selector, i.e., the public half of the token used to look its record up.
+     *
+     * Needed by anything that acts on a stored token without holding its plaintext — listing a
+     * user's tokens, revoking one from a management UI, recording its use.
+     *
+     * @return string|null Returns null if the token was revoked through this object
+     */
+    public function getSelector(): ?string
+    {
+        return $this->selector;
     }
 
     /**
@@ -333,15 +374,9 @@ final class SplitToken
      */
     public function revokeToken(bool $deleteToken = false): self
     {
-        $oneDayInSeconds = 86400;
-        $this->expirationTime = time() - $oneDayInSeconds;
+        self::revokeBySelector($this->storage, $this->selector ?? '', $deleteToken);
 
-        if ($deleteToken) {
-            $this->storage->delete($this->selector ?? '');
-        } else {
-            $this->storage->updateExpiration($this->selector ?? '', $this->expirationTime);
-        }
-
+        $this->expirationTime = time() - self::REVOCATION_TIME_OFFSET;
         $this->token = null;
         $this->selector = null;
         $this->hashedVerifier = null;
@@ -350,7 +385,37 @@ final class SplitToken
     }
 
     /**
+     * Revoke a token identified by its selector.
+     *
+     * This is the only revocation route open to a token whose plaintext nobody holds — which is
+     * every long-lived token, since users are told the plaintext is shown once and never again.
+     * {@see revokeToken()} needs an instance, and the only way to obtain one is
+     * {@see fromString()}, which needs that plaintext.
+     *
+     * @param TokenStorageInterface $storage     Storage backend for token persistence
+     * @param string                $selector    The selector of the token to revoke
+     * @param bool                  $deleteToken If true, the token row is deleted. If false (default), it is expired
+     *
+     * @throws InvalidTokenException
+     */
+    public static function revokeBySelector(TokenStorageInterface $storage, string $selector, bool $deleteToken = false): void
+    {
+        if ($deleteToken) {
+            $storage->delete($selector);
+
+            return;
+        }
+
+        $storage->updateExpiration($selector, time() - self::REVOCATION_TIME_OFFSET);
+    }
+
+    /**
      * Delete all expired tokens from storage.
+     *
+     * **This deletes revoked tokens too**, because revocation is stored as an expiration in the
+     * past — so running it erases the record of what was revoked and when. Where that history
+     * matters, use {@see ListableTokenStorageInterface::clearExpiredBefore()} with a cutoff instead,
+     * which sweeps only what expired long enough ago to be uninteresting.
      *
      * @param TokenStorageInterface $storage Storage backend for token persistence
      *

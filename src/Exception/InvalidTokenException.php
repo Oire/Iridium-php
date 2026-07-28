@@ -77,4 +77,13 @@ final class InvalidTokenException extends SplitTokenException
     {
         return new self('Verifier is empty or does not match.');
     }
+
+    /**
+     * @psalm-pure
+     * @psalm-suppress PossiblyUnusedReturnValue
+     */
+    public static function tokenExpired(): self
+    {
+        return new self('The token is expired or was revoked.');
+    }
 }

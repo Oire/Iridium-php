@@ -215,6 +215,124 @@ final class SplitTokenTest extends TestCase
         self::assertFalse($splitToken->isEternal());
     }
 
+    /**
+     * The security fix behind this: revocation is stored as an expiration in the past, and
+     * `fromString()` used to read the expiration into the object and return it regardless. A caller
+     * who did not know to call `isExpired()` therefore authenticated revoked tokens by default.
+     */
+    public function testFromStringRejectsARevokedToken(): void
+    {
+        $storage = self::getStorage();
+        $splitToken = SplitToken::create(
+            storage: $storage,
+            expirationTime: null,
+            userId: self::TEST_USER_ID
+        )
+            ->persist();
+        $token = $splitToken->getToken();
+        $selector = $splitToken->getSelector();
+
+        self::assertNotNull($token);
+        self::assertNotNull($selector);
+
+        SplitToken::revokeBySelector($storage, $selector);
+
+        $this->expectException(InvalidTokenException::class);
+        $this->expectExceptionMessage('The token is expired or was revoked.');
+
+        SplitToken::fromString($token, $storage);
+    }
+
+    public function testFromStringRejectsAnExpiredToken(): void
+    {
+        $storage = self::getStorage();
+        $token = SplitToken::create(
+            storage: $storage,
+            expirationTime: time() - 10,
+            userId: self::TEST_USER_ID
+        )
+            ->persist()
+            ->getToken();
+
+        self::assertNotNull($token);
+
+        $this->expectException(InvalidTokenException::class);
+
+        SplitToken::fromString($token, $storage);
+    }
+
+    public function testFromStringReturnsAnExpiredTokenWhenExplicitlyAsked(): void
+    {
+        $storage = self::getStorage();
+        $expirationTime = time() - 10;
+        $token = SplitToken::create(
+            storage: $storage,
+            expirationTime: $expirationTime,
+            userId: self::TEST_USER_ID
+        )
+            ->persist()
+            ->getToken();
+
+        self::assertNotNull($token);
+
+        $splitToken = SplitToken::fromString($token, $storage, allowExpired: true);
+
+        self::assertTrue($splitToken->isExpired());
+        self::assertSame($expirationTime, $splitToken->getExpirationTime());
+    }
+
+    public function testGetSelectorMatchesTheStoredRecord(): void
+    {
+        $storage = self::getStorage();
+        $splitToken = SplitToken::create(storage: $storage, userId: self::TEST_USER_ID)->persist();
+        $selector = $splitToken->getSelector();
+
+        self::assertNotNull($selector);
+        self::assertIsArray($storage->retrieve($selector));
+
+        $token = $splitToken->getToken();
+        self::assertNotNull($token);
+        self::assertSame($selector, SplitToken::fromString($token, $storage)->getSelector());
+    }
+
+    /**
+     * The route that matters for long-lived tokens: nobody holds the plaintext any more, so
+     * `revokeToken()` is unreachable and only a selector is left to act on.
+     */
+    public function testRevokeBySelectorExpiresTheToken(): void
+    {
+        $storage = self::getStorage();
+        $splitToken = SplitToken::create(
+            storage: $storage,
+            expirationTime: null,
+            userId: self::TEST_USER_ID
+        )
+            ->persist();
+        $selector = $splitToken->getSelector();
+
+        self::assertNotNull($selector);
+
+        SplitToken::revokeBySelector($storage, $selector);
+        $record = $storage->retrieve($selector);
+
+        self::assertIsArray($record, 'Expiring a token must keep its row for the audit trail.');
+        self::assertNotNull($record['expiration_time']);
+        self::assertLessThan(time(), (int) $record['expiration_time']);
+    }
+
+    public function testRevokeBySelectorCanDeleteInstead(): void
+    {
+        $storage = self::getStorage();
+        $splitToken = SplitToken::create(storage: $storage, userId: self::TEST_USER_ID)->persist();
+        $selector = $splitToken->getSelector();
+
+        self::assertNotNull($selector);
+
+        SplitToken::revokeBySelector($storage, $selector, true);
+
+        self::assertFalse($storage->retrieve($selector));
+    }
+
     public function testClearExpiredTokens(): void
     {
         $storage = self::getStorage();

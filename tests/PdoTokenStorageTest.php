@@ -159,4 +159,52 @@ final class PdoTokenStorageTest extends TestCase
         self::assertFalse($storage->retrieve('expired_1'));
         self::assertFalse($storage->retrieve('expired_2'));
     }
+
+    public function testClearExpiredBeforeKeepsRecentRevocations(): void
+    {
+        $storage = self::getStorage();
+        $storage->persist('ancient', 'verifier_a', 1, null, null, time() - 100 * 86400);
+        $storage->persist('recent', 'verifier_r', 2, null, null, time() - 86400);
+
+        self::assertSame(1, $storage->clearExpiredBefore(time() - 90 * 86400));
+        self::assertFalse($storage->retrieve('ancient'));
+        self::assertIsArray($storage->retrieve('recent'));
+    }
+
+    public function testFindByUserIdIsScopedAndOrdered(): void
+    {
+        $storage = self::getStorage();
+        $storage->persist('mine_1', 'verifier_1', 42, null, 'First', null);
+        $storage->persist('theirs', 'verifier_2', 99, null, 'Not mine', null);
+        $storage->persist('mine_2', 'verifier_3', 42, null, 'Second', null);
+
+        $found = $storage->findByUserId(42);
+
+        self::assertCount(2, $found);
+        self::assertSame(['First', 'Second'], array_map(static fn($token): ?string => $token->additionalInfo, $found));
+        self::assertSame([true, true], array_map(static fn($token): bool => $token->createdAt !== null, $found));
+    }
+
+    public function testFindBySelectorAndTouch(): void
+    {
+        $storage = self::getStorage();
+        $storage->persist('lookup', 'verifier_l', 42, 7, 'Labeled', null);
+
+        $found = $storage->findBySelector('lookup');
+
+        self::assertNotNull($found);
+        self::assertSame(42, $found->userId);
+        self::assertSame(7, $found->tokenType);
+        self::assertTrue($found->isEternal());
+        self::assertNull($found->lastUsedAt);
+        self::assertNull($storage->findBySelector('nope'));
+
+        $usedAt = time();
+        $storage->touch('lookup', $usedAt);
+        $touched = $storage->findBySelector('lookup');
+
+        self::assertNotNull($touched);
+        self::assertNotNull($touched->lastUsedAt);
+        self::assertSame($usedAt, $touched->lastUsedAt->getTimestamp());
+    }
 }

@@ -16,6 +16,7 @@
         "ext-sodium": "*"
     },
     "require-dev": {
+        "doctrine/dbal": "^4.0",
         "friendsofphp/php-cs-fixer": "*",
         "oire/php-code-style": "dev-master",
         "phpunit/phpunit": "*",
@@ -23,6 +24,7 @@
         "vimeo/psalm": "dev-master"
     },
     "suggest": {
+        "doctrine/dbal": "Required for DoctrineDbalTokenStorage",
         "ext-pdo_mysql": "Required for PdoTokenStorage with MySQL/MariaDB"
     },
     "license": "Apache-2.0",
@@ -35,8 +37,8 @@
         }
     ],
     "support": {
-        "issues":   "https://github.com/Oire/Iridium-php/issues",
-        "source":   "https://github.com/Oire/Iridium-php"
+        "issues": "https://github.com/Oire/Iridium-php/issues",
+        "source": "https://github.com/Oire/Iridium-php"
     },
     "autoload": {
         "psr-4": {
