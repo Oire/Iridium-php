@@ -258,6 +258,19 @@ As of v3.0, `SplitToken` is decoupled from PDO via the `TokenStorageInterface`. 
 * `delete(string $selector): void` — Delete a token by selector.
 * `clearExpired(): int` — Delete all expired tokens. Returns the count of deleted tokens.
 
+#### ListableTokenStorageInterface
+
+Single-use tokens such as password reset links never need to be enumerated: the user clicks the link, and the token is spent. Long-lived tokens are different. If you issue personal access tokens for an API, the owner has to be able to see what they issued and revoke one of them, and neither is possible with the methods above. `ListableTokenStorageInterface` extends `TokenStorageInterface` with the four operations that need:
+
+* `findByUserId(int $userId): list<StoredToken>` — Every token belonging to a user, oldest first.
+* `findBySelector(string $selector): ?StoredToken` — One token, for display or administration. Unlike `retrieve()`, which exists to feed `fromString()`, this returns a value object.
+* `touch(string $selector, int $usedAt): void` — Record that a token was used. Throttle this yourself; a chatty API client would otherwise force a write on every request.
+* `clearExpiredBefore(int $expiredBefore): int` — Delete tokens that expired at or before a cutoff. See *Clear Expired Tokens* below for why the cutoff matters.
+
+`StoredToken` is a readonly value object carrying `id`, `userId`, `selector`, `tokenType`, `additionalInfo`, `expirationTime`, `createdAt` and `lastUsedAt`, plus `isEternal()`, `isExpired()` and `getExpirationDate()`. It deliberately carries neither the token nor the verifier: a listing is something you show a user, and neither of those halves belongs on a screen.
+
+Both bundled storages implement this interface. It needs two extra columns — see *Create a Table* below.
+
 #### PdoTokenStorage
 
 ```php
@@ -266,6 +279,18 @@ use Oire\Iridium\Storage\PdoTokenStorage;
 $storage = new PdoTokenStorage($pdoConnection);
 // Or with a custom table name:
 $storage = new PdoTokenStorage($pdoConnection, 'my_tokens_table');
+```
+
+#### DoctrineDbalTokenStorage
+
+For applications already using Doctrine. `doctrine/dbal` is a suggested dependency only, so the library itself stays dependency-free — install it yourself if you use this storage.
+
+```php
+use Oire\Iridium\Storage\DoctrineDbalTokenStorage;
+
+$storage = new DoctrineDbalTokenStorage($dbalConnection);
+// From Doctrine ORM:
+$storage = new DoctrineDbalTokenStorage($entityManager->getConnection());
 ```
 
 ### Usage Examples
@@ -286,6 +311,14 @@ CREATE TABLE IF NOT EXISTS iridium_tokens (
     additional_info TEXT,
     expiration_time BIGINT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+If you want to use `ListableTokenStorageInterface`, add two more columns:
+
+```sql
+ALTER TABLE iridium_tokens
+    ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN last_used_at TIMESTAMP NULL;
 ```
 
 You may need to adjust the syntax to suit your particular database driver, as well as add foreign key constraints to match your `users` table.
@@ -334,15 +367,21 @@ use Oire\Iridium\SplitToken;
 try {
     $splitToken = SplitToken::fromString($token, $storage);
 } catch (InvalidTokenException $e) {
-    // Something went wrong with the token: either it is invalid, not found or has been tampered with
-}
-
-if ($splitToken->isExpired()) {
-    // The token is correct but expired
+    // The token is invalid, not found, tampered with, expired or revoked
 }
 ```
 
-**Note**! An expired token is considered settable, i.e., not valid per se but correct, so no exception is thrown in this case, you have to check it manually as shown above. If this behavior is non-intuitive or inconvenient, please [create a Github issue](https://github.com/Oire/Iridium-php/issues/new).
+**Note**! As of v3.1 an expired token is rejected, and so is a revoked one, because revocation is stored as an expiration in the past. Before v3.1 `fromString()` returned such tokens and left the check to you, which meant that a caller who did not know to call `isExpired()` authenticated revoked tokens by default.
+
+If you need the object in order to *report* on it — to tell a user when their password reset link died, say — pass `allowExpired: true`. Never do this to authenticate:
+
+```php
+$splitToken = SplitToken::fromString($token, $storage, allowExpired: true);
+
+if ($splitToken->isExpired()) {
+    printf('This link expired on %s.', $splitToken->getExpirationDateFormatted());
+}
+```
 
 #### Revoke a Token
 
@@ -356,6 +395,18 @@ After a token is used once for authentication, password reset and other sensitiv
 $splitToken = $splitToken->revokeToken(true);
 ```
 
+##### Revoking by Selector
+
+`revokeToken()` is an instance method, and the only way to obtain an instance is `fromString()`, which needs the plaintext token. For a long-lived token that plaintext is exactly what nobody has any more: the owner was shown it once and told it would never be shown again. Revoking such a token from a management screen is therefore impossible through `revokeToken()`.
+
+Use the static `revokeBySelector()` instead, with a selector taken from `getSelector()` or from a listing:
+
+```php
+SplitToken::revokeBySelector($storage, $selector);
+// Or, to delete the row rather than expire it:
+SplitToken::revokeBySelector($storage, $selector, true);
+```
+
 #### Clear Expired Tokens
 
 From time to time you will need to delete all expired tokens from the database to reduce the table size and search times. There is a method to do this. It is static, so you have to provide your `TokenStorageInterface` instance as its parameter. It returns the number of tokens deleted from the database.
@@ -364,12 +415,19 @@ From time to time you will need to delete all expired tokens from the database t
 $deletedTokens = SplitToken::clearExpiredTokens($storage);
 ```
 
+**Note**! This deletes revoked tokens too, since revocation is stored as an expiration in the past. Running it erases the record of what was revoked and when. Where that history matters — and for API keys it usually does — use a cutoff instead, which sweeps only what expired long enough ago to be uninteresting:
+
+```php
+// Keep about three months of revocation history.
+$deletedTokens = $storage->clearExpiredBefore(time() - 90 * 86400);
+```
+
 #### Notes on Expiration Times
 
 * All expiration times are internally stored as UTC timestamps.
 * Expiration times are set, compared and formatted according to the time of the PHP server, so you won't be in trouble even if your database server time is slightly off for some reason.
-* Expiration time with value `0` (zero) sets the default value, i.e., the token will expire in an hour.
-* If expiration time is set to `null`, the token is eternal and never expires.
+* Expiration time with value `0` (zero) sets the default value, i.e., the token will expire in an hour. Since a bare `0` reads like "no expiration" and silently gives you an hour instead, prefer the `SplitToken::EXPIRATION_DEFAULT` constant when you mean it.
+* If expiration time is set to `null`, the token is eternal and never expires. **This is what you want for API keys**, and it must be passed explicitly — the default is one hour.
 * Microseconds for expiration times are ignored for now, their support is planned for a future version.
 
 ### Error Handling
@@ -383,9 +441,10 @@ SplitToken throws two types of exceptions:
 
 Below all of the SplitToken public methods are outlined.
 
-* `static create(TokenStorageInterface $storage, int|string|null $expirationTime = 0, int|null $userId = null, int|null $tokenType = null, string|null $additionalInfo = null, Oire\Iridium\Key\SharedKey|null $additionalInfoKey = null): self` — Generate a new token. All the parameters are described above, only the storage is required. Expiration time is by default set to `0` which means the token expires in one hour. If `$additionalInfoKey` is not null, the additional info is encrypted with this key. Throws `SplitTokenException` if trying to set a non-positive user ID.
-* `static fromString(string $token, TokenStorageInterface $storage, Oire\Iridium\Key\SharedKey|null $additionalInfoKey = null): self` — Set and validate a user-provided token. If `$additionalInfoKey` is not null, decrypts the additional info stored in the database with this key.
+* `static create(TokenStorageInterface $storage, int|string|null $expirationTime = SplitToken::EXPIRATION_DEFAULT, int|null $userId = null, int|null $tokenType = null, string|null $additionalInfo = null, Oire\Iridium\Key\SharedKey|null $additionalInfoKey = null): self` — Generate a new token. All the parameters are described above, only the storage is required. Expiration time is by default set to `0` which means the token expires in one hour. If `$additionalInfoKey` is not null, the additional info is encrypted with this key. Throws `SplitTokenException` if trying to set a non-positive user ID.
+* `static fromString(string $token, TokenStorageInterface $storage, Oire\Iridium\Key\SharedKey|null $additionalInfoKey = null, bool $allowExpired = false): self` — Set and validate a user-provided token. If `$additionalInfoKey` is not null, decrypts the additional info stored in the database with this key. Throws `InvalidTokenException` if the token is expired or revoked, unless `$allowExpired` is `true`.
 * `getToken(): ?string` — Get the token for the current SplitToken instance as a string, or null if the token was revoked.
+* `getSelector(): ?string` — Get the selector, i.e., the public half of the token used to look its record up, or null if the token was revoked. Needed by anything that acts on a stored token without holding its plaintext.
 * `getUserId(): ?int` — Get the ID of the user the token belongs to, or null if not set.
 * `getExpirationTime(): ?int` — Get expiration time for the token as raw timestamp, or null if the token is eternal.
 * `getExpirationDate(): ?DateTimeImmutable` — Get expiration time for the token as a DateTimeImmutable object. Returns the date in the current time zone of your PHP server, or null if the token is eternal.
@@ -396,7 +455,8 @@ Below all of the SplitToken public methods are outlined.
 * `getAdditionalInfo(): string|null` — Get additional info for the token. Returns string or null, if additional info was not set before.
 * `persist(): self` — Store the token into the database. Returns `$this` for chainability.
 * `revokeToken(bool $deleteToken = false): self` — Revoke. i.e., invalidate the current token after it is used. If the `$deleteToken` parameter is set to `true`, the token will be deleted from the database, and `getToken()` will return `null`. If it is set to `false` (default), the expiration time for the token will be updated and set to a value in the past. Returns `$this` for chainability.
-* `static clearExpiredTokens(TokenStorageInterface $storage): int` — Delete all expired tokens from the database. Receives the storage instance as parameter. Returns the number of deleted tokens, as integer.
+* `static revokeBySelector(TokenStorageInterface $storage, string $selector, bool $deleteToken = false): void` — Revoke a token identified by its selector. This is the only revocation route open to a token whose plaintext nobody holds.
+* `static clearExpiredTokens(TokenStorageInterface $storage): int` — Delete all expired tokens from the database. Receives the storage instance as parameter. Returns the number of deleted tokens, as integer. Note that this deletes revoked tokens too.
 
 ## Changes and Bugfixes
 

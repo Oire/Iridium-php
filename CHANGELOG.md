@@ -1,3 +1,53 @@
+# Version 3.1
+
+## Security
+
+* **`SplitToken::fromString()` now rejects expired and revoked tokens.**
+  Previously it read the expiration into the object and returned successfully regardless, leaving
+  the check to the caller. Since `revokeToken()` records a revocation *as* an expiration in the
+  past, the default outcome for a caller who did not know to call `isExpired()` was that a revoked
+  token authenticated. If you relied on the old behavior to report on a dead token, pass the new
+  `allowExpired: true` argument — but never to authenticate:
+
+  ```php
+  // Before (v3.0) — a revoked token got through unless you remembered this check
+  $splitToken = SplitToken::fromString($token, $storage);
+
+  if ($splitToken->isExpired()) {
+      throw new RuntimeException('Expired');
+  }
+
+  // After (v3.1) — InvalidTokenException is thrown for you
+  $splitToken = SplitToken::fromString($token, $storage);
+  ```
+
+  Audit any code that calls `fromString()` without an `isExpired()` check afterwards: until now it
+  accepted revoked tokens.
+
+## Changes
+
+* **`SplitToken::revokeBySelector()`**, a static counterpart to `revokeToken()`.
+  `revokeToken()` needs an instance, and the only way to obtain one is `fromString()`, which needs
+  the plaintext token — precisely what the owner of a long-lived token no longer has, having been
+  shown it once. Revoking an API key from a management screen was therefore impossible through the
+  public API.
+* **`SplitToken::getSelector()`**. The selector is the public half of the token and the key to every
+  stored-token operation, but the object that had just validated one would not tell you what it was,
+  so consumers had to recompute it from the plaintext.
+* **`ListableTokenStorageInterface`**, an optional extension of `TokenStorageInterface` adding
+  `findByUserId()`, `findBySelector()`, `touch()` and `clearExpiredBefore()`, along with the
+  `StoredToken` value object. `TokenStorageInterface` could not enumerate a user's tokens, which any
+  personal-access-token management UI needs. Both bundled storages implement it; it requires two
+  further columns, `created_at` and `last_used_at` — see the README.
+* **`DoctrineDbalTokenStorage`**, a Doctrine DBAL storage implementation. `doctrine/dbal` is a
+  development and suggested dependency only, so the library stays dependency-free.
+* **`clearExpiredBefore()`** takes a cutoff, unlike `clearExpired()`, which uses the current time and
+  therefore also erases tokens revoked seconds ago. Passing `time() - 90 * 86400` keeps a quarter of
+  revocation history to audit.
+* **`SplitToken::EXPIRATION_DEFAULT`** names the magic `0` that means "expire in one hour". A bare
+  `0` reads like "no expiration" and silently gives an hour instead; `null` is what makes a token
+  eternal.
+
 # Version 3.0
 
 ## Breaking changes when upgrading from 2.x
