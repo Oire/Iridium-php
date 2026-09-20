@@ -5,8 +5,8 @@
 [![Psalm coverage](https://shepherd.dev/github/Oire/Iridium-php/coverage.svg?)](https://shepherd.dev/github/Oire/Iridium-php)
 [![Psalm level](https://shepherd.dev/github/Oire/Iridium-php/level.svg?)](https://psalm.dev/)
 
-Welcome to Iridium, a security library for encrypting data, hashing passwords and managing secure tokens!
-This library consists of several classes, or modules, and can be used for hashing and verifying passwords, encrypting and decrypting data, as well as for managing secure tokens suitable for authentication cookies, password reset, API access and various other tasks.
+Welcome to Iridium, a security library for encrypting data, hashing passwords, managing secure tokens and signing API requests!
+This library consists of several classes, or modules, and can be used for hashing and verifying passwords, encrypting and decrypting data, for managing secure tokens suitable for authentication cookies, password reset, API access and various other tasks, as well as for authenticating messages and whole HTTP requests with a shared key.
 
 ## Requirements
 
@@ -457,6 +457,118 @@ Below all of the SplitToken public methods are outlined.
 * `revokeToken(bool $deleteToken = false): self` — Revoke. i.e., invalidate the current token after it is used. If the `$deleteToken` parameter is set to `true`, the token will be deleted from the database, and `getToken()` will return `null`. If it is set to `false` (default), the expiration time for the token will be updated and set to a value in the past. Returns `$this` for chainability.
 * `static revokeBySelector(TokenStorageInterface $storage, string $selector, bool $deleteToken = false): void` — Revoke a token identified by its selector. This is the only revocation route open to a token whose plaintext nobody holds.
 * `static clearExpiredTokens(TokenStorageInterface $storage): int` — Delete all expired tokens from the database. Receives the storage instance as parameter. Returns the number of deleted tokens, as integer. Note that this deletes revoked tokens too.
+
+## ✍ Mac and Request Signing
+
+As of v3.2, a shared key can also *authenticate*: prove that a message, or a whole HTTP request, comes from someone who holds the key and was not changed on the way. Nothing is encrypted and the key never travels.
+
+**Which one do I need?** A SplitToken is a *bearer* credential: whoever presents it is let in, the server stores only a hash of it, and it suits many revocable credentials that each belong to a user. A signed request suits a credential that both sides hold, such as a secret built into an app or shared between two services: the secret is never sent, so a proxy or a request log cannot harvest it, and a captured request cannot be replayed against another endpoint or with another body.
+
+### Mac
+
+```php
+use Oire\Iridium\Key\SharedKey;
+use Oire\Iridium\Mac;
+
+$sharedKey = new SharedKey($keyFromYourEnvFile);
+
+$mac = Mac::sign('The message', $sharedKey, 'myapp-webhooks-v1');
+
+if (!Mac::verify('The message', $mac, $sharedKey, 'myapp-webhooks-v1')) {
+    // Not authentic
+}
+```
+
+The third argument is the **context**: a short label saying what this MAC is for. It is required, and it is what makes one shared key safe for several jobs. The shared key is never used directly: the MAC key is derived from it with HKDF-SHA256 (empty salt, 32 bytes, info `Iridium|Mac|V1|` followed by the context). A MAC made under one context is therefore worthless under another, and no MAC can ever be confused with anything the Crypt module does with the same key. Put a version in the context (`-v1`), so that you can change your message format later without the old and the new being interchangeable.
+
+The MAC itself is HMAC-SHA256, 32 bytes, returned as URL-safe Base64 without padding. Verification is constant-time, and a MAC that is malformed or of the wrong length is simply not valid: `verify()` returns `false` and throws only when the context is empty (`MacException`).
+
+#### Mac Methods
+
+* `static sign(string $message, SharedKey $key, string $context): string` — Returns the MAC in readable form.
+* `static verify(string $message, string $mac, SharedKey $key, string $context): bool` — Checks a MAC returned by `sign()`.
+* `static signRaw(string $message, SharedKey $key, string $context): string` and `static verifyRaw(string $message, string $rawMac, SharedKey $key, string $context): bool` — The same with the MAC as 32 raw bytes.
+* `static deriveKey(SharedKey $key, string $context): string` — The derived 32-byte MAC key. You do not need it to sign or verify; it is there so that a client written in another language can be checked against it.
+
+### Key Ring
+
+Keys get rotated, and for a while old and new clients call the same server. A `KeyRing` maps a **key ID** to its key, so each request says which key signed it:
+
+```php
+use Oire\Iridium\Key\KeyRing;
+
+$keyRing = KeyRing::fromPairs([
+    [$_ENV['API_KEY_ID'], $_ENV['API_KEY']],
+    [$_ENV['API_KEY_ID_PREVIOUS'] ?? null, $_ENV['API_KEY_PREVIOUS'] ?? null],
+]);
+```
+
+**A slot that is not filled does not exist.** A pair whose ID or key is null or empty is skipped, never put on the ring as an empty key. This is the whole point of the class: a MAC under an empty key can be forged by anyone, so an unused rotation slot must not be comparable at all. A key that *is* present must be a valid shared key (`SharedKeyException`), and an ID may appear only once (`KeyRingException`).
+
+* `static fromPairs(iterable $pairs): self` — Builds a ring from `[key ID, key]` pairs, skipping unfilled slots.
+* `add(string $keyId, SharedKey $key): self` — Puts a key on the ring. Returns `$this` for chainability.
+* `find(string $keyId): SharedKey|null` — The key an ID selects, or null.
+* `isEmpty(): bool`, `getKeyIds(): array` — For checking your configuration and for logging.
+
+### Signing a Request
+
+The client signs the method, the path and the body, and sends three extra values with the request. Iridium does not name the headers; use whatever your API uses.
+
+```php
+use Oire\Iridium\Request\RequestSigner;
+
+$signer = new RequestSigner($keyId, $sharedKey, 'myapp-api-v1');
+$signed = $signer->sign('POST', '/api/orders', $body);
+
+// $signed->keyId, $signed->timestamp, $signed->signature
+// e.g. X-MyApp-Key-Id, X-MyApp-Timestamp, X-MyApp-Signature
+```
+
+### Verifying a Request
+
+```php
+use Oire\Iridium\Request\RequestVerifier;
+
+$verifier = new RequestVerifier($keyRing, 'myapp-api-v1');
+
+$failure = $verifier->verify(
+    $method,
+    $path,        // as received: percent-encoded, no base path, no query string
+    $rawBody,
+    $keyIdHeader, // null when the header is absent
+    $timestampHeader,
+    $signatureHeader,
+);
+
+if ($failure !== null) {
+    $logger->warning('Request rejected', ['failure' => $failure->value, 'keyId' => $keyIdHeader]);
+
+    // Answer every failure the same way
+}
+```
+
+`verify()` returns `null` for an accepted request and a `RequestVerificationFailure` otherwise: `MissingFields`, `MalformedField`, `UnknownKeyId`, `BadSignature` or `StaleTimestamp`. **The reason is for your log, not for your response**: answer every failure identically, or the endpoint tells a stranger which key IDs exist. Log the key ID and the failure, never the signature. The signature is checked before the age of the timestamp, so `StaleTimestamp` always means a correctly signed request from a machine whose clock is off, and nothing else; you may want to send your server time with the rejection, so that such a client can correct its next timestamp (`sign()` accepts one).
+
+The timestamp must be within the **acceptance window** of the server clock, either way: 300 seconds unless you pass another value as the third constructor argument. There is no nonce, so an identical request is accepted again for as long as its timestamp stays inside the window. That makes the window your replay window: keep it short, and make the operations behind it safe to repeat.
+
+### The Signed String
+
+For clients in other languages. The signature is `Mac::sign()` over five lines joined by a single line feed, with no trailing line feed:
+
+```
+myapp-api-v1
+POST
+/api/orders
+1753900000
+<lowercase hex SHA-256 of the raw body>
+```
+
+* The first line is the context, which is also the label the MAC key is derived under.
+* The method is upper-cased. The path is signed exactly as it travels: percent-encoded, without scheme, host or query string. Both sides must agree on it byte for byte, so mind base paths and trailing slashes.
+* The timestamp is Unix seconds as decimal text, at most ten digits, without leading zeros, signed exactly as sent.
+* An empty body hashes the empty string; the line is never left out.
+
+[`tests/fixtures/request-signing-vectors.json`](https://github.com/Oire/Iridium-php/blob/master/tests/fixtures/request-signing-vectors.json) holds byte-exact test vectors — the derived MAC key, plain MACs and whole signed requests — computed outside PHP. Check your client against them.
 
 ## Changes and Bugfixes
 

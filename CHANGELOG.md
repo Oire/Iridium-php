@@ -1,3 +1,29 @@
+# Version 3.2
+
+## Changes
+
+* **`Mac`**, message authentication with a shared key: HMAC-SHA256, returned as URL-safe Base64.
+  Until now the only thing a `SharedKey` could do was encrypt. Every MAC is made under a required
+  **context**, and the MAC key is derived from the shared key with HKDF-SHA256 under that context,
+  so one key can serve Crypt and any number of MAC purposes without one being able to forge for
+  another.
+* **`KeyRing`**, a map from key ID to `SharedKey` for rotation, when old and new clients call the
+  same server for a while. `KeyRing::fromPairs()` reads pairs straight from configuration and
+  **skips a slot that is not filled** rather than holding an empty key: a MAC under an empty key can
+  be forged by anyone, which is an easy mistake to make with an unused "previous key" variable.
+* **Request signing**: `Request\RequestSigner` and `Request\RequestVerifier` authenticate a whole
+  HTTP request — method, path, timestamp and body — without ever sending the secret, which suits a
+  credential both sides hold (a secret built into an app, or shared between two services) where a
+  SplitToken, being a bearer token, does not. They take and return plain strings, so there is no
+  framework dependency and no fixed header names. The verifier reports why it refused through the
+  `RequestVerificationFailure` enum, meant for the log, never for the response. The acceptance
+  window is 300 seconds by default; there is no nonce, which the README states plainly.
+* **Test vectors** for clients in other languages, computed outside PHP:
+  `tests/fixtures/request-signing-vectors.json`. The signed string and the key derivation are
+  specified in the README.
+
+Nothing existing changes: this release only adds classes.
+
 # Version 3.1
 
 ## Security
