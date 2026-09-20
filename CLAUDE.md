@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Iridium is a security library for PHP providing authenticated encryption, password hashing, split token authentication, and URL-safe Base64 encoding. It is a mature, production library (v3.0) with zero runtime dependencies. Package name: `oire/iridium`.
+Iridium is a security library for PHP providing authenticated encryption, password hashing, split token authentication, message and HTTP request authentication (MAC), and URL-safe Base64 encoding. It is a mature, production library (v3.2) with zero runtime dependencies. Package name: `oire/iridium`.
 
 ## Quick Reference
 
@@ -40,12 +40,20 @@ Always run all three checks before committing.
 src/
   Base64.php          # URL-safe Base64 encoding/decoding
   Crypt.php           # AES-256-GCM authenticated encryption (with legacy v1 AES-256-CTR + HMAC-SHA384 support)
+  Mac.php             # HMAC-SHA256 under an HKDF-derived, per-context key
   Password.php        # Password hashing (Argon2id/Bcrypt wrapper)
   SplitToken.php      # Split token pattern for secure token auth
   Exception/          # Exception hierarchy (all extend IridiumException)
   Key/
     SharedKey.php     # 32-byte shared encryption key wrapper
     DerivedKeys.php   # Derived encryption + authentication keys via HKDF
+    KeyRing.php       # Key ID -> SharedKey for rotation; an unfilled slot does not exist
+  Request/
+    CanonicalRequest.php            # The five-line string a request signature covers
+    RequestSigner.php               # Client side: method + path + body -> SignedRequest
+    RequestVerifier.php             # Server side: returns null or a RequestVerificationFailure
+    RequestVerificationFailure.php  # Enum of refusal reasons, for the log only
+    SignedRequest.php               # Readonly value object: keyId, timestamp, signature
   Storage/
     TokenStorageInterface.php          # Interface for token persistence backends
     ListableTokenStorageInterface.php  # Optional extension: listing, usage tracking, cutoff sweeps
@@ -54,6 +62,8 @@ src/
     DoctrineDbalTokenStorage.php       # Doctrine DBAL implementation (dbal is a dev/suggest dep)
 tests/
   *Test.php           # One test class per source module
+  RequestSigningVectors.php  # Typed loader of the golden vectors
+  fixtures/request-signing-vectors.json  # Byte-exact vectors, computed outside PHP, for other-language clients
 ```
 
 ## Coding Conventions
@@ -105,3 +115,6 @@ This is a cryptographic library. When making changes:
   default outcome was that a revoked token authenticated.
 - Key material is zeroed via `sodium_memzero()` in destructors. Do not make key properties `readonly`.
 - Do not introduce timing side channels.
+- **`Mac` never uses a `SharedKey` directly.** The MAC key is HKDF-SHA256(raw key, empty salt, 32 bytes, info `Iridium|Mac|V1|` + context), and the context is required. Both the info prefix and the canonical request string (`CanonicalRequest`) are a **wire contract with clients in other languages**, pinned by `tests/fixtures/request-signing-vectors.json`: changing either, or a vector, breaks every deployed client. A new scheme gets a new prefix (`V2`), never an edit in place. Regenerate vectors outside PHP, never from Iridium's own output.
+- `KeyRing::fromPairs()` skips an unfilled slot. Never turn that into an empty key on the ring: a MAC under the empty key is forgeable by anyone.
+- `RequestVerifier` checks the signature **before** the timestamp's age, so `StaleTimestamp` only ever describes a correctly signed request. Keep that order.
