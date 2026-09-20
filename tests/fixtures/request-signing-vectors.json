@@ -1,0 +1,63 @@
+{
+    "_readme": [
+        "Golden vectors for Iridium request signing (Oire\\Iridium\\Mac and Oire\\Iridium\\Request). Byte-exact, for clients written in other languages.",
+        "Computed outside PHP (Python hmac/hashlib with a hand-written RFC 5869 HKDF), so the PHP tests pit two implementations against each other.",
+        "macKey = HKDF-SHA256(ikm = the 32 raw bytes of the shared key, salt = empty (32 zero bytes per RFC 5869), info = \"Iridium|Mac|V1|\" + context, length = 32).",
+        "canonical = five lines joined by a single LF, no trailing LF: context, METHOD in upper case, path as it travels (percent-encoded, no query string), timestamp text, lowercase hex SHA-256 of the raw body. An empty body hashes the empty string.",
+        "signature = URL-safe Base64 without padding of HMAC-SHA256(macKey, canonical).",
+        "timestamp = unix seconds as decimal text without leading zeros, at most 10 digits, signed exactly as sent."
+    ],
+    "key": {
+        "keyId": "0123456789ab",
+        "sharedKey": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+        "sharedKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "note": "A throwaway test key (bytes 0x00 to 0x1f). Never a real key."
+    },
+    "context": "example-api-v1",
+    "derivationInfo": "Iridium|Mac|V1|example-api-v1",
+    "macKeyHex": "524669c1f6526173c90c628bfea50fe0ba40ed9b8a7ccab6a599cca5b26fb27d",
+    "macs": [
+        {
+            "name": "a plain message",
+            "message": "Iridium",
+            "mac": "p3XwA9G96DzHX0G0qEqZ6QhEZTi5FJ7k-igsoeW1Uv0"
+        },
+        {
+            "name": "the empty message",
+            "message": "",
+            "mac": "-mA4zmJABqjhCwuguNlsRRvdPC7oS-O50hY0U11W-MU"
+        }
+    ],
+    "requests": [
+        {
+            "name": "POST with a JSON body",
+            "method": "POST",
+            "path": "/api/orders",
+            "timestamp": "1753900000",
+            "body": "{\"item\":\"café\",\"quantity\":2}",
+            "bodySha256Hex": "47e15c78edae54019979909774ff6c98f58016ff7e1ce62236adf08ae4c0ae37",
+            "canonical": "example-api-v1\nPOST\n/api/orders\n1753900000\n47e15c78edae54019979909774ff6c98f58016ff7e1ce62236adf08ae4c0ae37",
+            "signature": "s6k2GnAoUzPGpCETZmNGYXnYXpzSEgmJcvTLZmSQk6g"
+        },
+        {
+            "name": "GET with an empty body",
+            "method": "GET",
+            "path": "/api/orders/42",
+            "timestamp": "1753900000",
+            "body": "",
+            "bodySha256Hex": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "canonical": "example-api-v1\nGET\n/api/orders/42\n1753900000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "signature": "L2xIVJhN_Yd7f7FucdYIguDbrRQeBYxYXElJQIqufzc"
+        },
+        {
+            "name": "a percent-encoded path",
+            "method": "DELETE",
+            "path": "/api/files/r%C3%A9sum%C3%A9.pdf",
+            "timestamp": "1753900000",
+            "body": "",
+            "bodySha256Hex": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "canonical": "example-api-v1\nDELETE\n/api/files/r%C3%A9sum%C3%A9.pdf\n1753900000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "signature": "hksMnM7j5PJ1hQOQs84oPhr_UoMHwVWnos2dh94hscQ"
+        }
+    ]
+}
